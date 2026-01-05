@@ -83,12 +83,13 @@ Questions & Answers
 
    The sipmsg.log file is created on Acme Packet software when one of the
    following is enabled:
-     - Debug mode: ``notify sipd debug`` (disable with ``notify sipd
-       nodebug``)
-     - Advanced Logging (see the Oracle Communications SBC Maintenance and
-       Troubleshooting Guide)
-     - Explicit SIP logging: ``notify sipd siplog`` (stop with ``notify sipd
-       nosiplog``)
+
+   #. Debug mode: ``notify sipd debug`` (disable with ``notify sipd nodebug``)
+   #. Advanced Logging (see the Oracle Communications SBC Maintenance and
+      Troubleshooting Guide)
+   #. Explicit SIP logging: ``notify sipd siplog`` (stop with ``notify sipd
+      nosiplog``)
+
    You can download it directly from the device or as part of a log bundle
    created with ``package-logfiles`` or ``package-crashfiles``.
 
