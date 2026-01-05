@@ -2,15 +2,15 @@
     :target: https://github.com/amateja/acmepcap/actions/workflows/python-test.yml
 .. image:: https://img.shields.io/coveralls/amateja/acmepcap.svg
     :target: https://coveralls.io/github/amateja/acmepcap
-.. image:: https://img.shields.io/pypi/v/acmepcap.svg
+.. image:: https://img.shields.io/pypi/v/acmepcap
     :target: https://pypi.python.org/pypi/acmepcap
-.. image:: https://img.shields.io/pypi/format/acmepcap.svg
+.. image:: https://img.shields.io/pypi/format/acmepcap
     :target: https://pypi.python.org/pypi/acmepcap
-.. image:: https://img.shields.io/pypi/pyversions/acmepcap.svg
+.. image:: https://img.shields.io/pypi/pyversions/acmepcap
     :target: https://pypi.python.org/pypi/acmepcap
-.. image:: https://img.shields.io/pypi/status/acmepcap.svg
+.. image:: https://img.shields.io/pypi/status/acmepcap
     :target: https://pypi.python.org/pypi/acmepcap
-.. image:: https://img.shields.io/pypi/l/acmepcap.svg
+.. image:: https://img.shields.io/pypi/l/acmepcap
     :target: https://pypi.python.org/pypi/acmepcap
 
 ========
