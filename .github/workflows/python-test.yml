@@ -18,6 +18,8 @@ jobs:
     - name: Lint with flake8
       run: flake8
     - name: Run tests
-      run: coverage run --source acme -m unittest discover
+      run: |
+        coverage run --source acmepcap -m unittest discover
+        coverage xml
     - name: Coveralls
       uses: coverallsapp/github-action@v2
