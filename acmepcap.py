@@ -214,7 +214,7 @@ class IP:
 
 class IPv4(IP):
     """
-    Internet Protocol version 6 bytes representation based on RFC 760.
+    Internet Protocol version 4 bytes representation based on RFC 760.
     """
     offset = 20
 
