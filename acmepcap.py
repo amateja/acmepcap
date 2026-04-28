@@ -92,7 +92,7 @@ class PacketCapture:
         self.packets.append(bytes(frame))
         self.max_snap_len = max(self.max_snap_len, frame.packet.length)
 
-    def write(self, fd) -> None:
+    def write(self, fd: typing.BinaryIO) -> None:
         """
         Write the Packet Capture header to a fd followed by all packet frames.
 
