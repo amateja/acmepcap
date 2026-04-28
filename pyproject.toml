@@ -33,5 +33,17 @@ Homepage = 'https://github.com/amateja/acmepcap/'
 [project.scripts]
 acmepcap = 'acmepcap:main'
 
+[project.optional-dependencies]
+test = [
+    'coveralls',
+    'flake8',
+    'flake8-comprehensions',
+    'flake8-eradicate',
+    'flake8-pep3101',
+    'flake8-print',
+    'flake8-quotes',
+    'flake8-use-fstring',
+]
+
 [tool.setuptools.dynamic]
 version = {attr = 'acmepcap.__version__'}
