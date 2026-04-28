@@ -16,6 +16,9 @@ TTL = 64
 # https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcaplinktype/
 LINKTYPE_RAW = 101
 UTC = datetime.timezone.utc
+# Month abbreviation to number mapping. Used instead of datetime.strptime
+# for performance in tight parsing loops and because of sensitivity to locale
+# differences.
 MONTHS = {
     'Jan': 1,
     'Feb': 2,
@@ -264,6 +267,8 @@ class IPv4(IP):
         ) + bytes(self.transport)
 
 
+# TODO: So far no sipmsg.log with SIP over IPv6 was parsed. The IPv6 class
+#  is just for future use.
 class IPv6(IP):
     """
     Internet Protocol version 6 bytes representation based on RFC 2460.
