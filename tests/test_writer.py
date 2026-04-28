@@ -60,7 +60,7 @@ class TestPacketCapture(unittest.TestCase):
         p = PacketCapture()
         timestamp = time.time()
         seconds = int(timestamp)
-        microseconds = int((timestamp - seconds) * 1000)
+        microseconds = int((timestamp - seconds) * 1000000)
         source_port = 5060
         destination_port = 5060
         udp = UDP(source_port, destination_port, b'')
