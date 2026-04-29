@@ -147,7 +147,8 @@ class UDP:
         self.source = source
         self.destination = destination
         self.data = data
-        self._ip = None
+        self.ip_source = 0
+        self.ip_destination = 0
         self.length = len(data) + 8
 
     @property
@@ -157,17 +158,10 @@ class UDP:
 
         :return: checksum
         """
-        if self._ip is None:
-            ip_source = 0
-            ip_destination = 0
-        else:
-            ip_source = self._ip.source
-            ip_destination = self._ip.destination
-
         vector = (
             # pseudo header part
-            ip_source,
-            ip_destination,
+            self.ip_source,
+            self.ip_destination,
             self.number,
             self.length,
             # udp header part
@@ -206,11 +200,10 @@ class IP:
     offset = 0
 
     def __init__(self, source: int, destination: int, transport: UDP) -> None:
-        self.source = source
-        self.destination = destination
+        self.source = transport.ip_source = source
+        self.destination = transport.ip_destination = destination
         self.transport = transport
         self.length = self.offset + transport.length
-        transport._ip = self
 
     def __bytes__(self) -> bytes:
         raise NotImplementedError
