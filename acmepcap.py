@@ -151,8 +151,8 @@ class UDP:
     number = 17  # RFC 1700
 
     def __init__(self, source: int, destination: int, data: bytes) -> None:
-        self.source = source
-        self.destination = destination
+        self.source = source & 65535
+        self.destination = destination & 65535
         self.data = data
         self.ip_source = 0
         self.ip_destination = 0
