@@ -1,3 +1,4 @@
+import functools
 import ipaddress
 from unittest import TestCase
 
@@ -14,7 +15,7 @@ class IPv4Test(TestCase):
         ip = IPv4(source_ip, destination_ip, udp)
         ip_checksum = 0xf77d
         length = 28
-        int_ = int.from_bytes
+        int_ = functools.partial(int.from_bytes, byteorder='big')
         self.assertEqual(ip.checksum, ip_checksum)
         raw = bytes(ip)
         # Version|IHL
