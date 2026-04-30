@@ -9,7 +9,17 @@ import typing
 import zoneinfo
 
 __version__ = '0.1.0'
-__all__ = ['PacketCapture', 'Frame', 'UDP', 'IPv4', 'IPv6', 'SipMsgLogFile']
+__all__ = [
+    'ENDIANNESS',
+    'Frame',
+    'IPv4',
+    'IPv6',
+    'LINKTYPE_RAW',
+    'PacketCapture',
+    'SipMsgLogFile',
+    'TTL',
+    'UDP',
+]
 
 # constants
 ENDIANNESS = '='  # native

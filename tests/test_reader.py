@@ -1,7 +1,7 @@
+import datetime
 import io
 import time
 import unittest
-import datetime
 from unittest.mock import patch
 
 from acmepcap import SipMsgLogFile

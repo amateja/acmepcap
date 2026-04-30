@@ -2,7 +2,7 @@ import functools
 import ipaddress
 from unittest import TestCase
 
-from acmepcap import IPv4, IPv6, UDP, TTL
+from acmepcap import IPv4, IPv6, TTL, UDP
 
 
 class IPv4Test(TestCase):
