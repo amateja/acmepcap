@@ -36,6 +36,7 @@ MONTHS = {
 }
 # types
 IP_type = typing.Union['IPv4', 'IPv6']
+PCAP_type = typing.Union[typing.BinaryIO, gzip.GzipFile]
 
 
 def configure() -> argparse.Namespace:
@@ -95,7 +96,7 @@ class PacketCapture:
         self.packets.append(bytes(frame))
         self.max_snap_len = max(self.max_snap_len, frame.packet.length)
 
-    def write(self, fd: typing.BinaryIO) -> None:
+    def write(self, fd: PCAP_type) -> None:
         """
         Write the Packet Capture header to a fd followed by all packet frames.
 
@@ -374,7 +375,7 @@ def main() -> None:
     settings.file.close()
 
     if settings.compress:
-        output = gzip.open(settings.output, 'wb')
+        output = gzip.GzipFile(None, 'wb', 9, settings.output)
     else:
         output = settings.output
 
