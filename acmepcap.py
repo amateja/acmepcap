@@ -79,6 +79,8 @@ class PacketCapture:
     Packet Capture file writer based on
     https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/
     """
+    __slots__ = ['packets', 'max_snap_len']
+
     def __init__(self) -> None:
         self.packets = []
         self.max_snap_len = 0  # maximum length of captured packets in octets
@@ -121,6 +123,8 @@ class Frame:
     Packet Capture Frame bytes representation based on
     https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/
     """
+    __slots__ = ['seconds', 'microseconds', 'packet']
+
     def __init__(self, seconds: int, microseconds: int,
                  packet: IP_type) -> None:
         self.seconds = seconds
@@ -141,6 +145,8 @@ class UDP:
     """
     User Datagram Protocol bytes representation based on RFC 768.
     """
+    __slots__ = ['source', 'destination', 'data',
+                 'ip_source', 'ip_destination', 'length']
     number = 17  # RFC 1700
 
     def __init__(self, source: int, destination: int, data: bytes) -> None:
@@ -197,6 +203,7 @@ class IP:
     """
     An abstract class for commons of Internet Protocol version 4 and version 6.
     """
+    __slots__ = ['source', 'destination', 'transport', 'length']
     offset = 0
 
     def __init__(self, source: int, destination: int, transport: UDP) -> None:
