@@ -1,4 +1,5 @@
 import argparse
+import dataclasses
 import datetime
 import gzip
 import ipaddress
@@ -44,6 +45,20 @@ MONTHS = {
     'Nov': 11,
     'Dec': 12
 }
+SIPMSG_DELIMITER = b'-' * 40 + b'\n'
+SIPMSG_HEADER = re.compile(
+    rb'^(?P<month>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) {1,2}'
+    rb'(?P<day>\d{1,2}) '
+    rb'(?P<hour>\d{1,2}):(?P<minute>\d{2}):(?P<second>\d{2})\.'
+    rb'(?P<millisecond>\d{3}) On '
+    rb'(?:\[\d+:\d+])?'
+    rb'(?P<local_ip>\d{1,3}(?:\.\d{1,3}){3}):'
+    rb'(?P<local_port>\d{1,5}) '
+    rb'(?P<direction>sent to|received from) '
+    rb'(?P<remote_ip>\d{1,3}(?:\.\d{1,3}){3}):'
+    rb'(?P<remote_port>\d{1,5})$'
+)
+SIPMSG_WORD_PAYLOAD = re.compile(rb'^\w')
 # types
 IP_type = typing.Union['IPv4', 'IPv6']
 PCAP_type = typing.Union[typing.BinaryIO, gzip.GzipFile]
@@ -60,7 +75,7 @@ def configure() -> argparse.Namespace:
     )
     parser.add_argument(
         '-f', '--file',
-        type=argparse.FileType('r'),
+        type=argparse.FileType('rb'),
         required=True,
         help='sipmsg.log file',
     )
@@ -304,72 +319,343 @@ class IPv6(IP):
         return b''.join(packet)
 
 
+@dataclasses.dataclass(frozen=True)
+class SipMsgRecordHeader:
+    """
+    Parsed sipmsg.log header fields needed to build one packet frame.
+
+    The log header itself has no year. The year is resolved later from file
+    metadata and the position of the last valid message in the file.
+    """
+    month: int
+    day: int
+    hour: int
+    minute: int
+    second: int
+    microsecond: int
+    source_ip: int
+    source_port: int
+    destination_ip: int
+    destination_port: int
+
+
+@dataclasses.dataclass
+class SipTimestampResolver:
+    """
+    Resolve missing sipmsg.log years while preserving log order.
+
+    sipmsg.log timestamps are local wall-clock values without a year, UTC
+    offset, or DST fold marker. The resolver assumes records are emitted in
+    chronological order. It tries the earliest local timestamp that does not
+    move backward in UTC; DST fold=1 is used only when it prevents a false
+    fall-back rollover.
+    """
+    timezone: datetime.tzinfo
+    start_year: int
+    current_year: int = dataclasses.field(init=False)
+    previous_utc: typing.Optional[datetime.datetime] = None
+
+    def __post_init__(self) -> None:
+        self.current_year = self.start_year
+
+    def _fold_candidates(
+            self, header: SipMsgRecordHeader
+    ) -> typing.Iterator[datetime.datetime]:
+        """
+        Yield fold=0, and fold=1 only when timezone rules make it distinct.
+        """
+        kwargs = {
+            'year': self.current_year,
+            'month': header.month,
+            'day': header.day,
+            'hour': header.hour,
+            'minute': header.minute,
+            'second': header.second,
+            'microsecond': header.microsecond,
+            'tzinfo': self.timezone
+        }
+        timestamp = datetime.datetime(fold=0, **kwargs)
+        yield timestamp
+
+        folded = datetime.datetime(fold=1, **kwargs)
+        if folded.utcoffset() != timestamp.utcoffset():
+            yield folded
+
+    def resolve(self, header: SipMsgRecordHeader) -> datetime.datetime:
+        """
+        Return the next chronological timestamp for a parsed log header.
+
+        Equal millisecond timestamps are accepted as the same instant. If both
+        DST folds move backward, the record is treated as a year rollover.
+        """
+        while True:
+            for timestamp in self._fold_candidates(header):
+                # Compare in UTC so DST folds are ordered by real time,
+                # not wall time.
+                timestamp_utc = timestamp.astimezone(UTC)
+                if self.previous_utc is None or \
+                        timestamp_utc >= self.previous_utc:
+                    self.previous_utc = timestamp_utc
+                    return timestamp
+            self.current_year += 1
+
+
+@dataclasses.dataclass
+class SipMsgRecordState:
+    """
+    Mutable state for one sipmsg.log record while it is being parsed.
+    """
+    header: typing.Optional[SipMsgRecordHeader] = None
+    timestamp: typing.Optional[datetime.datetime] = None
+    payload: typing.Optional[typing.List[bytes]] = None
+    is_skipped: bool = False
+
+    @property
+    def is_active(self) -> bool:
+        return self.header is not None
+
+    def start(self, header: SipMsgRecordHeader,
+              timestamp: typing.Optional[datetime.datetime]) -> None:
+        self.header = header
+        self.timestamp = timestamp
+        self.payload = None
+        self.is_skipped = timestamp is None
+
+    def reset(self) -> None:
+        self.header = None
+        self.timestamp = None
+        self.payload = None
+        self.is_skipped = False
+
+    def add_payload_line(self, line: bytes) -> None:
+        if self.payload is None:
+            if SIPMSG_WORD_PAYLOAD.match(line):
+                self.payload = [line]
+            else:
+                self.is_skipped = True
+            return
+
+        self.payload.append(line)
+
+    def payload_bytes(self) -> bytes:
+        return b''.join(self.payload or [])
+
+    def to_record(self) -> typing.Optional['SipMsgRecord']:
+        if self.header is None:
+            return None
+        if self.timestamp is None:
+            return None
+        if self.payload is None:
+            return None
+
+        return SipMsgRecord(
+            timestamp=self.timestamp,
+            header=self.header,
+            payload=self.payload_bytes(),
+        )
+
+
+@dataclasses.dataclass(frozen=True)
+class SipMsgRecord:
+    """
+    Complete sipmsg.log record ready for packet conversion.
+    """
+    timestamp: datetime.datetime
+    header: SipMsgRecordHeader
+    payload: bytes
+
+
 class SipMsgLogFile:
     """
     An iterable sipmsg.log reader and parser class.
+
+    The reader intentionally uses two passes over a seekable binary stream:
+
+    1. Find the last valid message timestamp so year rollover can be inferred
+       without reading the whole file into memory.
+    2. Parse complete message records one by one and yield PCAP frames.
+
+    Records whose first payload line does not start with a word character are
+    treated as non-SIP and skipped. Their headers still contribute to timestamp
+    chronology.
     """
-    def __init__(self, fd: typing.IO[str], timezone: str) -> None:
+    def __init__(self, fd: typing.BinaryIO, timezone: str) -> None:
         self.fd = fd
         # Dates in sipmsg.log are written in local timezone but there is no
         # information what timezone it is. To be accurate some external hint
         # is required.
         self.timezone = zoneinfo.ZoneInfo(timezone)
 
-    def __iter__(self) -> typing.Iterator[Frame]:
-        m_timestamp = os.path.getmtime(self.fd.name)
-        # When sipmsg.log is retrieved from package-logfiles tarball it has
-        # mtimes resolution in seconds rounded down and time entries in
-        # sipmsg.log are in milliseconds.
-        if int(m_timestamp) == m_timestamp:
-            m_timestamp += 60
-        m_datetime = datetime.datetime.fromtimestamp(m_timestamp, UTC)
-        m_year = m_datetime.year
-        pattern = r'^(\w{3}) (\d+) (\d+):(\d+):(\d+)\.(\d+) On ' \
-            r'(?:\[\d+:\d+\])?(\d+\.\d+\.\d+\.\d+):(\d+) ' \
-            r'(sent to|received from) (\d+\.\d+\.\d+\.\d+):(\d+)\n' \
-            r'(\w+.*?)(?:--+)'
-        needles = re.findall(pattern, self.fd.read(), re.MULTILINE | re.DOTALL)
-        if not needles:
-            return
-        month, day, hour, minute, second, millisecond, *_ = needles[-1]
-        last_timestamp = datetime.datetime(
-            year=m_year, month=MONTHS[month], day=int(day),
-            hour=int(hour), minute=int(minute), second=int(second),
-            microsecond=int(millisecond) * 1000, tzinfo=self.timezone
+    @staticmethod
+    def _parse_port(port: bytes) -> int:
+        """
+        Convert and validate a UDP port from a sipmsg.log header.
+
+        UDP itself masks ports to 16 bits, but parser input should be checked
+        at the boundary so malformed records can be skipped intentionally.
+        """
+        value = int(port)
+        if not 0 <= value <= 0xffff:
+            raise ValueError('UDP port out of range')
+        return value
+
+    def _parse_header(
+            self, line: bytes) -> typing.Optional[SipMsgRecordHeader]:
+        """
+        Parse one sipmsg.log header line.
+
+        Malformed headers return None so callers can continue scanning later
+        records. This keeps conversion best-effort for machine-generated logs.
+        """
+        match = SIPMSG_HEADER.match(line)
+        if match is None:
+            return None
+
+        try:
+            header = match.groupdict()
+            local_ip = int(ipaddress.ip_address(header['local_ip'].decode()))
+            remote_ip = int(ipaddress.ip_address(header['remote_ip'].decode()))
+            local_port = self._parse_port(header['local_port'])
+            remote_port = self._parse_port(header['remote_port'])
+        except (KeyError, ValueError):
+            return None
+
+        if header['direction'] == b'sent to':
+            source_ip = local_ip
+            source_port = local_port
+            destination_ip = remote_ip
+            destination_port = remote_port
+        else:
+            source_ip = remote_ip
+            source_port = remote_port
+            destination_ip = local_ip
+            destination_port = local_port
+
+        return SipMsgRecordHeader(
+            month=MONTHS[header['month'].decode()],
+            day=int(header['day']),
+            hour=int(header['hour']),
+            minute=int(header['minute']),
+            second=int(header['second']),
+            microsecond=int(header['millisecond']) * 1000,
+            source_ip=source_ip,
+            source_port=source_port,
+            destination_ip=destination_ip,
+            destination_port=destination_port,
         )
-        if last_timestamp > m_datetime:
-            last_timestamp = last_timestamp.replace(year=m_year - 1)
 
-        for i in needles:
-            month, day, hour, minute, second, millisecond, local_ip, \
-                local_port, direction, remote_ip, remote_port, message = i
-            microsecond = int(millisecond) * 1000
-            local_ip = int(ipaddress.ip_address(local_ip))
-            remote_ip = int(ipaddress.ip_address(remote_ip))
-            local_port = int(local_port)
-            remote_port = int(remote_port)
-            message = message.encode()
-            if direction == 'sent to':
-                source_ip = local_ip
-                source_port = local_port
-                destination_ip = remote_ip
-                destination_port = remote_port
-            else:
-                source_ip = remote_ip
-                source_port = remote_port
-                destination_ip = local_ip
-                destination_port = local_port
+    def _mtime_reference(self) -> datetime.datetime:
+        """
+        Return file mtime in the log timezone, including tarball tolerance.
 
-            udp = UDP(source_port, destination_port, message)
-            ip = IPv4(source_ip, destination_ip, udp)
-            timestamp = datetime.datetime(
-                year=m_year, month=MONTHS[month], day=int(day),
-                hour=int(hour), minute=int(minute), second=int(second),
-                microsecond=microsecond, tzinfo=self.timezone
+        Files copied directly from devices may have sub-second mtime precision.
+        Archived files may store mtime with whole-second precision while
+        sipmsg.log entries use milliseconds, so one second is enough tolerance.
+        """
+        m_timestamp = os.path.getmtime(self.fd.name)
+        if int(m_timestamp) == m_timestamp:
+            m_timestamp += 1
+        return datetime.datetime.fromtimestamp(m_timestamp, self.timezone)
+
+    def _resolve_start_year(self) -> typing.Optional[int]:
+        """
+        Scan valid headers and resolve the start year for the parsing pass.
+
+        All valid headers, including non-SIP records, contribute to chronology.
+        The first pass builds a virtual timeline from the mtime year, then
+        shifts that timeline back until the last timestamp is not after file
+        mtime. If a shifted date is invalid, such as Feb 29 in a non-leap year,
+        the resolver keeps stepping back until the date can be represented.
+        """
+        reference = self._mtime_reference()
+        resolver = SipTimestampResolver(self.timezone, reference.year)
+        last_timestamp = None
+        start_position = self.fd.tell()
+        for line in self.fd:
+            header = self._parse_header(line)
+            if header is None:
+                continue
+            try:
+                last_timestamp = resolver.resolve(header)
+            except ValueError:
+                continue
+        self.fd.seek(start_position)
+        if last_timestamp is None:
+            return None
+
+        years = 0
+        timestamp_year = last_timestamp.year
+        while last_timestamp > reference:
+            years += 1
+            try:
+                last_timestamp = last_timestamp.replace(
+                    year=timestamp_year - years)
+            except ValueError:
+                pass
+        return reference.year - years
+
+    def _iter_records(
+            self, resolver: SipTimestampResolver
+    ) -> typing.Iterator[SipMsgRecord]:
+        """
+        Yield valid SIP-text records from the current file position.
+
+        Non-SIP records are skipped by checking only the first payload
+        line. Once that line starts with a word character, the rest of the
+        payload is kept unchanged until the exact 40-dash delimiter. Every
+        valid header advances the timestamp resolver, even when its payload is
+        skipped, because skipped records still preserve log chronology.
+        """
+        record = SipMsgRecordState()
+
+        for line in self.fd:
+            header = self._parse_header(line)
+            if header is not None:
+                timestamp = None
+                try:
+                    # Advance timestamp state...
+                    timestamp = resolver.resolve(header)
+                except ValueError:
+                    # ... skipping headers with impossible dates.
+                    pass
+                record.start(header, timestamp)
+                continue
+
+            if line == SIPMSG_DELIMITER:
+                completed = record.to_record()
+                if completed is not None:
+                    yield completed
+                record.reset()
+                continue
+
+            if not record.is_active or record.is_skipped:
+                # Ignore unrelated lines and skipped record bodies until
+                # delimiter.
+                continue
+
+            record.add_payload_line(line)
+
+        completed = record.to_record()
+        if completed is not None:
+            yield completed
+
+    def __iter__(self) -> typing.Iterator[Frame]:
+        start_year = self._resolve_start_year()
+        if start_year is None:
+            return
+
+        timestamp_resolver = SipTimestampResolver(self.timezone, start_year)
+
+        for record in self._iter_records(timestamp_resolver):
+            header = record.header
+            seconds = int(record.timestamp.timestamp())
+            udp = UDP(
+                header.source_port,
+                header.destination_port,
+                record.payload,
             )
-            if timestamp > last_timestamp:
-                timestamp = timestamp.replace(year=m_year - 1)
-            yield Frame(int(timestamp.timestamp()), microsecond, ip)
+            ip = IPv4(header.source_ip, header.destination_ip, udp)
+            yield Frame(seconds, header.microsecond, ip)
 
 
 def main() -> None:

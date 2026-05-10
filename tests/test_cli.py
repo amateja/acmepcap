@@ -36,7 +36,7 @@ class AlwaysOpenBytes(io.BytesIO):
         pass
 
 
-def configure(compress: bool, payload='') -> argparse.Namespace:
+def configure(compress: bool, payload=b'') -> argparse.Namespace:
     """
     Mock of acmepcap.configure function.
 
@@ -44,7 +44,7 @@ def configure(compress: bool, payload='') -> argparse.Namespace:
     :param payload: sipmsg.log payload
     :return: argparse.Namespace with all configuration parameters.
     """
-    sip_msg = io.StringIO(payload)
+    sip_msg = io.BytesIO(payload)
     sip_msg.name = 'spam'
     return argparse.Namespace(
         file=sip_msg,
@@ -72,8 +72,9 @@ class TestMain(unittest.TestCase):
     def test_with_payload(self):
         settings = configure(
             False,
-            'Jun 21 12:13:14.567 On [0:0]1.1.1.1:5060 sent to 2.2.2.2:5060\n'
-            'spam\n--'
+            b'Jun 21 12:13:14.567 On [0:0]1.1.1.1:5060 sent to 2.2.2.2:5060\n'
+            b'spam\n'
+            b'----------------------------------------\n'
         )
         with patch('acmepcap.configure', return_value=settings), \
                 patch('acmepcap.os.path.getmtime', return_value=time.time()):
