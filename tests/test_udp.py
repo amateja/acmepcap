@@ -31,9 +31,9 @@ class TestUdpChecksum(unittest.TestCase):
 
     def test_udp_checksum_all_zeros(self):
         """
-        In case the checksum is not calculated the value should be set to 0.
-        If the checksum calculation results in the value zero it should be
-        set to 0xffff. This tests the latter.
+        A UDP checksum field of zero means the checksum is not used. When the
+        computed one's-complement checksum is zero, it must be transmitted as
+        0xffff. This tests that case.
         """
         src_ip = int(ipaddress.IPv4Address('192.168.0.1'))
         dst_ip = int(ipaddress.IPv4Address('192.168.0.2'))

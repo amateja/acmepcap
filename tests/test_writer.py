@@ -10,11 +10,10 @@ from acmepcap import ENDIANNESS, Frame, IPv4, LINKTYPE_RAW, PacketCapture, UDP
 
 def get_byteorder() -> typing.Literal['little', 'big']:
     """
-    Packet Capture may use in header part either big or little endian
-    convention. This script by default uses native endianness, but to be a bit
-    dynamic this is not taken for granted. Therefore, some verification
-    mechanisms is required. This function returns 'little' or 'big' basing on
-    acmepcap.ENDIANNESS constant and running CPU and OS architecture.
+    Packet Capture files may use either big-endian or little-endian headers.
+    The implementation uses native endianness by default, so tests need to
+    derive the expected byte order from `acmepcap.ENDIANNESS` and the current
+    platform.
 
     :return: endianness string
     """
