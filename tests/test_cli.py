@@ -1,4 +1,5 @@
 import argparse
+import gzip
 import io
 import sys
 import time
@@ -26,14 +27,18 @@ class TestArgs(unittest.TestCase):
 
 class AlwaysOpenBytes(io.BytesIO):
     """
-    For testing purpose keep the stream always open by overriding its close()
-    method.
+    For testing purpose keep the stream inspectable after close().
     """
+
+    def __init__(self):
+        super().__init__()
+        self.close_count = 0
+
     def close(self):
         """
-        Override parent's class method to do nothing.
+        Count close requests without closing the in-memory buffer.
         """
-        pass
+        self.close_count += 1
 
 
 def configure(compress: bool, payload=b'') -> argparse.Namespace:
@@ -60,7 +65,11 @@ class TestMain(unittest.TestCase):
         with patch('acmepcap.configure', return_value=settings), \
                 patch('acmepcap.os.path.getmtime', return_value=time.time()):
             acmepcap.main()
-        self.assertEqual(settings.output.tell(), 32)
+        self.assertEqual(settings.output.tell(), 37)
+        self.assertEqual(settings.output.close_count, 1)
+        settings.output.seek(0)
+        with gzip.GzipFile(fileobj=settings.output, mode='rb') as gzip_file:
+            self.assertEqual(len(gzip_file.read()), 24)
 
     def test_without_compression(self):
         settings = configure(False)
@@ -68,6 +77,7 @@ class TestMain(unittest.TestCase):
                 patch('acmepcap.os.path.getmtime', return_value=time.time()):
             acmepcap.main()
         self.assertEqual(settings.output.tell(), 24)
+        self.assertEqual(settings.output.close_count, 1)
 
     def test_with_payload(self):
         settings = configure(
@@ -80,3 +90,4 @@ class TestMain(unittest.TestCase):
                 patch('acmepcap.os.path.getmtime', return_value=time.time()):
             acmepcap.main()
         self.assertEqual(settings.output.tell(), 73)
+        self.assertEqual(settings.output.close_count, 1)

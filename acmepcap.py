@@ -17,6 +17,7 @@ __all__ = [
     'IPv6',
     'LINKTYPE_RAW',
     'PacketCapture',
+    'SNAP_LEN',
     'SipMsgLogFile',
     'TTL',
     'UDP',
@@ -27,6 +28,7 @@ ENDIANNESS = '='  # native
 TTL = 64
 # https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcaplinktype/
 LINKTYPE_RAW = 101
+SNAP_LEN = 65535
 UTC = datetime.timezone.utc
 # Month abbreviation to number mapping. Used instead of datetime.strptime
 # for performance in tight parsing loops and because of sensitivity to locale
@@ -61,7 +63,6 @@ SIPMSG_HEADER = re.compile(
 SIPMSG_WORD_PAYLOAD = re.compile(rb'^\w')
 # types
 IP_type = typing.Union['IPv4', 'IPv6']
-PCAP_type = typing.Union[typing.BinaryIO, gzip.GzipFile]
 
 
 def configure() -> argparse.Namespace:
@@ -102,30 +103,31 @@ def configure() -> argparse.Namespace:
 
 class PacketCapture:
     """
-    Packet Capture file writer based on
+    Streaming Packet Capture file writer based on
     https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/
     """
-    __slots__ = ['packets', 'max_snap_len']
+    __slots__ = ['fd', 'compressed', 'output']
 
-    def __init__(self) -> None:
-        self.packets = []
-        self.max_snap_len = 0  # maximum length of captured packets in octets
+    def __init__(self, fd: typing.BinaryIO, compressed: bool) -> None:
+        self.fd = fd
+        self.compressed = compressed
+        self.output = None
 
-    def add_frame(self, frame: 'Frame') -> None:
+    def __enter__(self) -> 'PacketCapture':
+        if self.compressed:
+            self.output = gzip.open(self.fd, 'wb')
+        else:
+            self.output = self.fd
+        self._write_file_header()
+        return self
+
+    def __exit__(self, *args: typing.Any) -> None:
+        if self.compressed and self.output is not None:
+            self.output.close()
+
+    def _write_file_header(self) -> None:
         """
-        Adds a Frame object to the packet capture and calculates the length
-        of the largest packet.
-
-        :param frame: a Packet Capture Frame object
-        """
-        self.packets.append(bytes(frame))
-        self.max_snap_len = max(self.max_snap_len, frame.packet.length)
-
-    def write(self, fd: PCAP_type) -> None:
-        """
-        Write the Packet Capture header to a fd followed by all packet frames.
-
-        :param fd: writable binary file-like object
+        Write the Packet Capture file header.
         """
         # Lower part of Magic Number (0xc3d4) denotes timestamps in
         # microseconds. Value 0x3c4d would denote timestamps in nanoseconds.
@@ -136,12 +138,18 @@ class PacketCapture:
             4,                  # Minor Version
             0,                  # Reserved1
             0,                  # Reserved2
-            self.max_snap_len,  # SnapLen
+            SNAP_LEN,           # SnapLen
             LINKTYPE_RAW        # LinkType and additional information
         )
-        fd.write(data)
-        for packet in self.packets:
-            fd.write(packet)
+        self.output.write(data)
+
+    def write(self, frame: 'Frame') -> None:
+        """
+        Write one Packet Capture frame.
+
+        :param frame: Packet Capture frame object
+        """
+        self.output.write(bytes(frame))
 
 
 class Frame:
@@ -664,21 +672,11 @@ def main() -> None:
     sipmsg.log and writing Packet Capture file.
     """
     settings = configure()
-    pcap = PacketCapture()
-
-    for frame in SipMsgLogFile(settings.file, settings.timezone):
-        pcap.add_frame(frame)
+    with PacketCapture(settings.output, settings.compress) as pcap:
+        for frame in SipMsgLogFile(settings.file, settings.timezone):
+            pcap.write(frame)
     settings.file.close()
-
-    if settings.compress:
-        output = gzip.GzipFile(None, 'wb', 9, settings.output)
-    else:
-        output = settings.output
-
-    pcap.write(output)
-    output.close()
-    if settings.compress:
-        settings.output.close()
+    settings.output.close()
 
 
 if __name__ == '__main__':

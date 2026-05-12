@@ -5,7 +5,8 @@ import time
 import typing
 import unittest
 
-from acmepcap import ENDIANNESS, Frame, IPv4, LINKTYPE_RAW, PacketCapture, UDP
+from acmepcap import ENDIANNESS, Frame, IPv4, LINKTYPE_RAW, PacketCapture, \
+    SNAP_LEN, UDP
 
 
 def get_byteorder() -> typing.Literal['little', 'big']:
@@ -30,8 +31,8 @@ class TestPacketCapture(unittest.TestCase):
         Verify Packet Capture file header fields.
         """
         stream = io.BytesIO()
-        p = PacketCapture()
-        p.write(stream)
+        with PacketCapture(stream, False):
+            pass
         stream.seek(0)
         raw = stream.read()
         byteorder = get_byteorder()
@@ -45,8 +46,8 @@ class TestPacketCapture(unittest.TestCase):
         self.assertEqual(int.from_bytes(raw[8:12], byteorder), 0)
         # Reserved2
         self.assertEqual(int.from_bytes(raw[12:16], byteorder), 0)
-        # max length of captured packets, in octets
-        self.assertEqual(int.from_bytes(raw[16:20], byteorder), 0)
+        # maximum length of captured packets, in octets
+        self.assertEqual(int.from_bytes(raw[16:20], byteorder), SNAP_LEN)
         # data link type and additional information
         self.assertEqual(int.from_bytes(raw[20:24], byteorder), LINKTYPE_RAW)
         self.assertEqual(len(raw), 24)
@@ -56,7 +57,6 @@ class TestPacketCapture(unittest.TestCase):
         Verify Packet Capture frame fields.
         """
         stream = io.BytesIO()
-        p = PacketCapture()
         timestamp = time.time()
         seconds = int(timestamp)
         microseconds = int((timestamp - seconds) * 1000000)
@@ -67,8 +67,8 @@ class TestPacketCapture(unittest.TestCase):
         destination_ip = int(ipaddress.IPv4Address('192.168.0.2'))
         ip = IPv4(source_ip, destination_ip, udp)
         frame = Frame(seconds, microseconds, ip)
-        p.add_frame(frame)
-        p.write(stream)
+        with PacketCapture(stream, False) as pcap:
+            pcap.write(frame)
         stream.seek(0)
         raw = stream.read()
         byteorder = get_byteorder()
