@@ -35,18 +35,18 @@ UTC = datetime.timezone.utc
 # for performance in tight parsing loops and because of sensitivity to locale
 # differences.
 MONTHS = {
-    'Jan': 1,
-    'Feb': 2,
-    'Mar': 3,
-    'Apr': 4,
-    'May': 5,
-    'Jun': 6,
-    'Jul': 7,
-    'Aug': 8,
-    'Sep': 9,
-    'Oct': 10,
-    'Nov': 11,
-    'Dec': 12
+    b'Jan': 1,
+    b'Feb': 2,
+    b'Mar': 3,
+    b'Apr': 4,
+    b'May': 5,
+    b'Jun': 6,
+    b'Jul': 7,
+    b'Aug': 8,
+    b'Sep': 9,
+    b'Oct': 10,
+    b'Nov': 11,
+    b'Dec': 12
 }
 SIPMSG_DELIMITER = b'-' * 40 + b'\n'
 SIPMSG_HEADER = re.compile(
@@ -570,7 +570,7 @@ class SipMsgLogFile:
             destination_port = local_port
 
         return SipMsgRecordHeader(
-            month=MONTHS[header['month'].decode()],
+            month=MONTHS[header['month']],
             day=int(header['day']),
             hour=int(header['hour']),
             minute=int(header['minute']),
