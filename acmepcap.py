@@ -342,7 +342,7 @@ class SipMsgRecordHeader:
     Parsed sipmsg.log header fields needed to build one packet frame.
 
     The log header itself has no year. The year is resolved later from file
-    metadata and the position of the last valid message in the file.
+    mtime and chronological order of valid log headers.
     """
     month: int
     day: int
@@ -420,7 +420,11 @@ class SipTimestampResolver:
 @dataclasses.dataclass
 class SipMsgRecordState:
     """
-    Mutable state for one sipmsg.log record while it is being parsed.
+    Mutable state for the record currently being read.
+
+    The parser receives sipmsg.log one line at a time. This object keeps the
+    current header, resolved timestamp, payload lines, and skip state until a
+    delimiter confirms that the record is complete.
     """
     header: typing.Optional[SipMsgRecordHeader] = None
     timestamp: typing.Optional[datetime.datetime] = None
@@ -483,7 +487,7 @@ class SipMsgRecordState:
 @dataclasses.dataclass(frozen=True)
 class SipMsgRecord:
     """
-    Complete sipmsg.log record ready for packet conversion.
+    Complete SIP record that can be converted into a PCAP frame.
     """
     timestamp: datetime.datetime
     header: SipMsgRecordHeader
@@ -492,9 +496,11 @@ class SipMsgRecord:
 
 class SipMsgLogFile:
     """
-    An iterable sipmsg.log reader and parser class.
+    Iterable reader for Acme Packet sipmsg.log files.
 
-    The reader intentionally uses two passes over a seekable binary stream:
+    The reader is designed for support workflows where large SBC logs need to
+    be converted into PCAP without loading the whole file into memory. It uses
+    two passes over a seekable binary stream:
 
     1. Find the last valid message timestamp so year rollover can be inferred
        without reading the whole file into memory.

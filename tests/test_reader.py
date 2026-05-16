@@ -99,7 +99,7 @@ class ReaderTest(unittest.TestCase):
 
     def test_read_flip_mtime(self):
         """
-        Simulate an input file from a tar archive with mtime from future.
+        Simulate an input file from a tar archive with mtime from the past.
         """
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3].encode()
