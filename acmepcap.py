@@ -6,6 +6,7 @@ import ipaddress
 import os.path
 import re
 import struct
+import sys
 import typing
 import zoneinfo
 
@@ -60,6 +61,9 @@ SIPMSG_HEADER = re.compile(
     rb'(?P<remote_ip>\d{1,3}(?:\.\d{1,3}){3}):'
     rb'(?P<remote_port>\d{1,5})$'
 )
+SIPMSG_HEADER_CANDIDATE = re.compile(
+    rb'^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) {1,2}\d{1,2} '
+)
 SIPMSG_WORD_PAYLOAD = re.compile(rb'^\w')
 # types
 IP_type = typing.Union['IPv4', 'IPv6']
@@ -97,6 +101,11 @@ def configure() -> argparse.Namespace:
         choices=zoneinfo.available_timezones(),
         help='SBC timezone as tz database identifier defaults to UTC',
         metavar='TIMEZONE'
+    )
+    parser.add_argument(
+        '--summary',
+        action='store_true',
+        help='print conversion summary to stderr',
     )
     return parser.parse_args()
 
@@ -435,15 +444,23 @@ class SipMsgRecordState:
         self.payload = None
         self.is_skipped = False
 
-    def add_payload_line(self, line: bytes) -> None:
+    def add_payload_line(self, line: bytes) -> bool:
+        """
+        Add a payload line and return whether the record remains convertible.
+
+        The first payload line decides if the record looks like SIP. Lines
+        starting with whitespace are treated as non-SIP records and skipped.
+        """
         if self.payload is None:
             if SIPMSG_WORD_PAYLOAD.match(line):
                 self.payload = [line]
+                return True
             else:
                 self.is_skipped = True
-            return
+                return False
 
         self.payload.append(line)
+        return True
 
     def payload_bytes(self) -> bytes:
         return b''.join(self.payload or [])
@@ -485,10 +502,17 @@ class SipMsgLogFile:
 
     Records whose first payload line does not start with a word character are
     treated as non-SIP and skipped. Their headers still contribute to timestamp
-    chronology.
+    chronology. Records not closed by the exact 40-dash delimiter are treated
+    as incomplete and skipped.
     """
     def __init__(self, fd: typing.BinaryIO, timezone: str) -> None:
         self.fd = fd
+        self.converted = 0
+        self.skipped_non_sip = 0
+        self.skipped_malformed = 0
+        self.skipped_timestamp = 0
+        self.skipped_empty = 0
+        self.skipped_incomplete = 0
         # Dates in sipmsg.log are written in local timezone but there is no
         # information what timezone it is. To be accurate some external hint
         # is required.
@@ -602,68 +626,123 @@ class SipMsgLogFile:
                 pass
         return reference.year - years
 
-    def _iter_records(
-            self, resolver: SipTimestampResolver
-    ) -> typing.Iterator[SipMsgRecord]:
+    def summary(self) -> str:
         """
-        Yield valid SIP-text records from the current file position.
-
-        Non-SIP records are skipped by checking only the first payload
-        line. Once that line starts with a word character, the rest of the
-        payload is kept unchanged until the exact 40-dash delimiter. Every
-        valid header advances the timestamp resolver, even when its payload is
-        skipped, because skipped records still preserve log chronology.
+        Return a human-readable conversion summary for optional CLI output.
         """
-        record = SipMsgRecordState()
+        skipped = self.skipped_non_sip + self.skipped_malformed + \
+            self.skipped_timestamp + self.skipped_empty + \
+            self.skipped_incomplete
+        return 'Summary:\n' \
+            f'  converted records: {self.converted}\n' \
+            f'  skipped records: {skipped}\n' \
+            f'  skipped non-SIP records: {self.skipped_non_sip}\n' \
+            f'  skipped malformed records: {self.skipped_malformed}\n' \
+            f'  skipped timestamp records: {self.skipped_timestamp}\n' \
+            f'  skipped empty records: {self.skipped_empty}\n' \
+            f'  skipped incomplete records: {self.skipped_incomplete}\n'
 
-        for line in self.fd:
-            header = self._parse_header(line)
-            if header is not None:
-                timestamp = None
-                try:
-                    # Advance timestamp state...
-                    timestamp = resolver.resolve(header)
-                except ValueError:
-                    # ... skipping headers with impossible dates.
-                    pass
-                record.start(header, timestamp)
-                continue
+    def _start_record(self, record: SipMsgRecordState,
+                      header: SipMsgRecordHeader,
+                      resolver: SipTimestampResolver) -> None:
+        """
+        Start tracking a new log record and resolve its timestamp.
 
-            if line == SIPMSG_DELIMITER:
-                completed = record.to_record()
-                if completed is not None:
-                    yield completed
-                record.reset()
-                continue
+        Timestamp resolution happens before payload classification so skipped
+        non-SIP records still preserve chronological context for later records.
+        """
+        timestamp = None
+        try:
+            timestamp = resolver.resolve(header)
+        except ValueError:
+            self.skipped_timestamp += 1
+        record.start(header, timestamp)
 
-            if not record.is_active or record.is_skipped:
-                # Ignore unrelated lines and skipped record bodies until
-                # delimiter.
-                continue
+    def _flush_record(
+            self, record: SipMsgRecordState) -> typing.Optional[Frame]:
+        """
+        Convert a delimiter-closed record into a frame when it is complete.
 
-            record.add_payload_line(line)
-
+        Empty records are counted as skipped. Incomplete records are handled at
+        EOF, where a missing delimiter means the record may have been truncated
+        by log rotation.
+        """
         completed = record.to_record()
         if completed is not None:
-            yield completed
+            header = completed.header
+            seconds = int(completed.timestamp.timestamp())
+            udp = UDP(
+                header.source_port,
+                header.destination_port,
+                completed.payload,
+            )
+            ip = IPv4(header.source_ip, header.destination_ip, udp)
+            self.converted += 1
+            record.reset()
+            return Frame(seconds, header.microsecond, ip)
+        if record.header is not None and record.timestamp is not None \
+                and record.payload is None and not record.is_skipped:
+            self.skipped_empty += 1
+        record.reset()
+        return None
 
     def __iter__(self) -> typing.Iterator[Frame]:
+        """
+        Yield frames for complete SIP records.
+
+        The state machine reacts to valid headers, malformed header candidates,
+        exact delimiters, and payload lines. EOF without a delimiter marks the
+        active record as incomplete instead of yielding it.
+        """
         start_year = self._resolve_start_year()
         if start_year is None:
             return
 
         timestamp_resolver = SipTimestampResolver(self.timezone, start_year)
+        record = SipMsgRecordState()
 
-        for record in self._iter_records(timestamp_resolver):
-            header = record.header
-            seconds = int(record.timestamp.timestamp())
-            udp = UDP(
-                header.source_port,
-                header.destination_port,
-                record.payload,
-            )
-            ip = IPv4(header.source_ip, header.destination_ip, udp)
-            yield Frame(seconds, header.microsecond, ip)
+        for line in self.fd:
+            header = self._parse_header(line)
+            if header is not None:
+                # A valid header starts a new sipmsg.log record. Resolve the
+                # timestamp before reading the payload so skipped records still
+                # preserve chronology.
+                self._start_record(record, header, timestamp_resolver)
+                continue
+
+            if SIPMSG_HEADER_CANDIDATE.match(line):
+                # The line looks like a sipmsg.log header but failed strict
+                # parsing, for example because of an invalid IP address or
+                # port.
+                self.skipped_malformed += 1
+                record.reset()
+                continue
+
+            if line == SIPMSG_DELIMITER:
+                # The exact 40-dash delimiter is the only trusted end-of-record
+                # marker. A complete SIP record is converted; an empty record
+                # is counted as skipped.
+                frame = self._flush_record(record)
+                if frame is not None:
+                    yield frame
+                continue
+
+            if not record.is_active or record.is_skipped:
+                # We are either outside a record or ignoring the body of a
+                # record already classified as skipped. Wait for a header or
+                # delimiter to change parser state.
+                continue
+
+            # We are inside an active record. The first payload line decides
+            # whether this is SIP-like enough to convert; later payload lines
+            # are preserved.
+            if not record.add_payload_line(line):
+                self.skipped_non_sip += 1
+
+        # EOF before a delimiter means the active record may be truncated by
+        # log rotation, so it is counted but not converted.
+        if record.is_active and not record.is_skipped:
+            self.skipped_incomplete += 1
 
 
 def main() -> None:
@@ -672,9 +751,12 @@ def main() -> None:
     sipmsg.log and writing Packet Capture file.
     """
     settings = configure()
+    reader = SipMsgLogFile(settings.file, settings.timezone)
     with PacketCapture(settings.output, settings.compress) as pcap:
-        for frame in SipMsgLogFile(settings.file, settings.timezone):
+        for frame in reader:
             pcap.write(frame)
+    if settings.summary:
+        sys.stderr.write(reader.summary())
     settings.file.close()
     settings.output.close()
 

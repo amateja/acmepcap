@@ -40,6 +40,12 @@ class ReaderTest(unittest.TestCase):
 
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].seconds, int(now.timestamp()))
+        self.assertEqual(sip_msg.converted, 1)
+        self.assertEqual(sip_msg.skipped_non_sip, 0)
+        self.assertEqual(sip_msg.skipped_malformed, 0)
+        self.assertEqual(sip_msg.skipped_timestamp, 0)
+        self.assertEqual(sip_msg.skipped_empty, 0)
+        self.assertEqual(sip_msg.skipped_incomplete, 0)
 
     def test_read_incoming(self):
         """
@@ -171,6 +177,13 @@ class ReaderTest(unittest.TestCase):
         with patch('acmepcap.os.path.getmtime', return_value=time.time()):
             self.assertEqual(list(sip_msg), [])
 
+        self.assertEqual(sip_msg.converted, 0)
+        self.assertEqual(sip_msg.skipped_non_sip, 1)
+        self.assertEqual(sip_msg.skipped_malformed, 0)
+        self.assertEqual(sip_msg.skipped_timestamp, 0)
+        self.assertEqual(sip_msg.skipped_empty, 0)
+        self.assertEqual(sip_msg.skipped_incomplete, 0)
+
     def test_skip_malformed_record_and_yield_next_valid_record(self):
         """
         Continue after a malformed record and extract later valid records.
@@ -192,6 +205,7 @@ class ReaderTest(unittest.TestCase):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
+        self.assertEqual(sip_msg.skipped_malformed, 1)
 
     def test_skip_invalid_port_and_yield_next_valid_record(self):
         """
@@ -214,6 +228,7 @@ class ReaderTest(unittest.TestCase):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
+        self.assertEqual(sip_msg.skipped_malformed, 1)
 
     def test_skip_impossible_date_and_yield_next_valid_record(self):
         """
@@ -238,6 +253,31 @@ class ReaderTest(unittest.TestCase):
         expected = datetime.datetime(2025, 3, 1, 15, 40, 34, 54000, tzinfo=UTC)
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].seconds, int(expected.timestamp()))
+        self.assertEqual(sip_msg.skipped_timestamp, 1)
+
+    def test_skip_empty_record_and_yield_next_valid_record(self):
+        """
+        Continue after a header without payload before delimiter.
+        """
+        stream = io.BytesIO(
+            b'Sep 10 15:40:33.054 On 127.0.0.1:2945 '
+            b'sent to 127.0.0.1:2944\n'
+            b'----------------------------------------\n'
+            b'Sep 10 15:40:34.054 On 127.0.0.1:2945 '
+            b'sent to 127.0.0.1:2944\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
+        stream.name = 'spam'
+        mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
+        sip_msg = SipMsgLogFile(stream, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime',
+                   return_value=mtime.timestamp()):
+            frames = list(sip_msg)
+
+        self.assertEqual(len(frames), 1)
+        self.assertEqual(sip_msg.skipped_empty, 1)
 
     def test_leap_day_year_shift_skips_non_leap_years(self):
         """
@@ -260,9 +300,9 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].seconds, int(expected.timestamp()))
 
-    def test_yield_final_message_without_delimiter(self):
+    def test_skip_final_message_without_delimiter(self):
         """
-        Yield the last valid record even when the delimiter is missing.
+        Treat the final record as incomplete when the delimiter is missing.
         """
         now = datetime.datetime.now(UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3].encode()
@@ -276,7 +316,8 @@ class ReaderTest(unittest.TestCase):
         with patch('acmepcap.os.path.getmtime', return_value=time.time()):
             frames = list(sip_msg)
 
-        self.assertEqual(len(frames), 1)
+        self.assertEqual(len(frames), 0)
+        self.assertEqual(sip_msg.skipped_incomplete, 1)
 
     def test_two_pass_year_rollover(self):
         """
