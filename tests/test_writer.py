@@ -1,6 +1,7 @@
-import io
 import ipaddress
+import pathlib
 import sys
+import tempfile
 import time
 import typing
 import unittest
@@ -26,15 +27,20 @@ def get_byteorder() -> typing.Literal['little', 'big']:
 
 
 class TestPacketCapture(unittest.TestCase):
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.output_path = pathlib.Path(self.tmpdir.name) / 'output.pcap'
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
     def test_file_header(self):
         """
         Verify Packet Capture file header fields.
         """
-        stream = io.BytesIO()
-        with PacketCapture(stream, False):
+        with PacketCapture(self.output_path, False):
             pass
-        stream.seek(0)
-        raw = stream.read()
+        raw = self.output_path.read_bytes()
         byteorder = get_byteorder()
         # magic number
         self.assertEqual(int.from_bytes(raw[0:4], byteorder), 0xa1b2c3d4)
@@ -52,11 +58,17 @@ class TestPacketCapture(unittest.TestCase):
         self.assertEqual(int.from_bytes(raw[20:24], byteorder), LINKTYPE_RAW)
         self.assertEqual(len(raw), 24)
 
+    def test_exit_without_enter(self):
+        """
+        Ignore context exit when no output file was opened.
+        """
+        PacketCapture(self.output_path, False).__exit__(None, None, None)
+        self.assertFalse(self.output_path.exists())
+
     def test_add_simple_frame(self):
         """
         Verify Packet Capture frame fields.
         """
-        stream = io.BytesIO()
         timestamp = time.time()
         seconds = int(timestamp)
         microseconds = int((timestamp - seconds) * 1000000)
@@ -67,10 +79,9 @@ class TestPacketCapture(unittest.TestCase):
         destination_ip = int(ipaddress.IPv4Address('192.168.0.2'))
         ip = IPv4(source_ip, destination_ip, udp)
         frame = Frame(seconds, microseconds, ip)
-        with PacketCapture(stream, False) as pcap:
+        with PacketCapture(self.output_path, False) as pcap:
             pcap.write(frame)
-        stream.seek(0)
-        raw = stream.read()
+        raw = self.output_path.read_bytes()
         byteorder = get_byteorder()
         self.assertEqual(int.from_bytes(raw[24:28], byteorder), seconds)
         self.assertEqual(int.from_bytes(raw[28:32], byteorder), microseconds)

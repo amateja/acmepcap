@@ -4,6 +4,7 @@ import datetime
 import gzip
 import ipaddress
 import os.path
+import pathlib
 import re
 import struct
 import sys
@@ -78,7 +79,7 @@ def configure() -> argparse.Namespace:
     )
     parser.add_argument(
         '-f', '--file',
-        type=argparse.FileType('rb'),
+        type=input_path,
         required=True,
         help='sipmsg.log file',
     )
@@ -89,7 +90,7 @@ def configure() -> argparse.Namespace:
     )
     parser.add_argument(
         '-o', '--output',
-        type=argparse.FileType('wb'),
+        type=output_path,
         required=True,
         help='output packet capture file',
     )
@@ -108,28 +109,76 @@ def configure() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def input_path(string: str) -> pathlib.Path:
+    """
+    Validate an existing readable input file and return its absolute path.
+    """
+    path = pathlib.Path(string).absolute()
+
+    if not path.exists():
+        raise argparse.ArgumentTypeError(
+            f'input file {path} does not exist')
+    if not path.is_file():
+        raise argparse.ArgumentTypeError(
+            f'input path {path} is not a file')
+    if not os.access(path, os.R_OK):
+        raise argparse.ArgumentTypeError(
+            f'input file {path} is not readable')
+    return path
+
+
+def output_path(string: str) -> pathlib.Path:
+    """
+    Validate a writable output path and return its absolute path.
+    """
+    path = pathlib.Path(string).absolute()
+
+    if path.exists():
+        if not path.is_file():
+            raise argparse.ArgumentTypeError(
+                f'output path {path} is not a file')
+        if not os.access(path, os.W_OK):
+            raise argparse.ArgumentTypeError(
+                f'output file {path} is not writable')
+    else:
+        parent = path.parent
+        if not parent.exists():
+            raise argparse.ArgumentTypeError(
+                f'output directory {parent} does not exist')
+        if not parent.is_dir():
+            raise argparse.ArgumentTypeError(
+                f'output parent {parent} is not a directory')
+        # Creating a file needs write permission and directory search access.
+        if not os.access(parent, os.W_OK | os.X_OK):
+            raise argparse.ArgumentTypeError(
+                f'output directory {parent} is not writable')
+    return path
+
+
 class PacketCapture:
     """
     Streaming Packet Capture file writer based on
     https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/
-    """
-    __slots__ = ['fd', 'compressed', 'output']
 
-    def __init__(self, fd: typing.BinaryIO, compressed: bool) -> None:
-        self.fd = fd
+    The writer opens the output path on context entry and closes it on exit.
+    """
+    __slots__ = ['path', 'compressed', 'output']
+
+    def __init__(self, path: pathlib.Path, compressed: bool) -> None:
+        self.path = path
         self.compressed = compressed
         self.output = None
 
     def __enter__(self) -> 'PacketCapture':
         if self.compressed:
-            self.output = gzip.open(self.fd, 'wb')
+            self.output = gzip.open(self.path, 'wb')
         else:
-            self.output = self.fd
+            self.output = self.path.open('wb')
         self._write_file_header()
         return self
 
     def __exit__(self, *args: typing.Any) -> None:
-        if self.compressed and self.output is not None:
+        if self.output is not None:
             self.output.close()
 
     def _write_file_header(self) -> None:
@@ -494,8 +543,8 @@ class SipMsgLogFile:
     Iterable reader for Acme Packet sipmsg.log files.
 
     The reader is designed for support workflows where large SBC logs need to
-    be converted into PCAP without loading the whole file into memory. It uses
-    two passes over a seekable binary stream:
+    be converted into PCAP without loading the whole file into memory. It opens
+    the input file twice:
 
     1. Find the last valid message timestamp so year rollover can be inferred
        without reading the whole file into memory.
@@ -506,8 +555,8 @@ class SipMsgLogFile:
     chronology. Records not closed by the exact 40-dash delimiter are treated
     as incomplete and skipped.
     """
-    def __init__(self, fd: typing.BinaryIO, timezone: str) -> None:
-        self.fd = fd
+    def __init__(self, path: pathlib.Path, timezone: str) -> None:
+        self.path = path
         self.converted = 0
         self.skipped_non_sip = 0
         self.skipped_malformed = 0
@@ -585,7 +634,7 @@ class SipMsgLogFile:
         Archived files may store mtime with whole-second precision while
         sipmsg.log entries use milliseconds, so one second is enough tolerance.
         """
-        m_timestamp = os.path.getmtime(self.fd.name)
+        m_timestamp = os.path.getmtime(self.path)
         if int(m_timestamp) == m_timestamp:
             m_timestamp += 1
         return datetime.datetime.fromtimestamp(m_timestamp, self.timezone)
@@ -603,16 +652,16 @@ class SipMsgLogFile:
         reference = self._mtime_reference()
         resolver = SipTimestampResolver(self.timezone, reference.year)
         last_timestamp = None
-        start_position = self.fd.tell()
-        for line in self.fd:
-            header = self._parse_header(line)
-            if header is None:
-                continue
-            try:
-                last_timestamp = resolver.resolve(header)
-            except ValueError:
-                continue
-        self.fd.seek(start_position)
+
+        with self.path.open('rb') as file:
+            for line in file:
+                header = self._parse_header(line)
+                if header is None:
+                    continue
+                try:
+                    last_timestamp = resolver.resolve(header)
+                except ValueError:
+                    continue
         if last_timestamp is None:
             return None
 
@@ -702,48 +751,49 @@ class SipMsgLogFile:
         timestamp_resolver = SipTimestampResolver(self.timezone, start_year)
         record = SipMsgRecordState()
 
-        for line in self.fd:
-            header = self._parse_header(line)
-            if header is not None:
-                # A valid header starts a new sipmsg.log record. Resolve the
-                # timestamp before reading the payload so skipped records still
-                # preserve chronology.
-                self._start_record(record, header, timestamp_resolver)
-                continue
+        with self.path.open('rb') as file:
+            for line in file:
+                header = self._parse_header(line)
+                if header is not None:
+                    # A valid header starts a new sipmsg.log record. Resolve
+                    # the timestamp before reading the payload so skipped
+                    # records still preserve chronology.
+                    self._start_record(record, header, timestamp_resolver)
+                    continue
 
-            if SIPMSG_HEADER_CANDIDATE.match(line):
-                # The line looks like a sipmsg.log header but failed strict
-                # parsing, for example because of an invalid IP address or
-                # port.
-                self.skipped_malformed += 1
-                record.reset()
-                continue
+                if SIPMSG_HEADER_CANDIDATE.match(line):
+                    # The line looks like a sipmsg.log header but failed strict
+                    # parsing, for example because of an invalid IP address or
+                    # port.
+                    self.skipped_malformed += 1
+                    record.reset()
+                    continue
 
-            if line == SIPMSG_DELIMITER:
-                # The exact 40-dash delimiter is the only trusted end-of-record
-                # marker. A complete SIP record is converted; an empty record
-                # is counted as skipped.
-                frame = self._flush_record(record)
-                if frame is not None:
-                    yield frame
-                continue
+                if line == SIPMSG_DELIMITER:
+                    # The exact 40-dash delimiter is the only trusted
+                    # end-of-record marker. A complete SIP record is converted;
+                    # an empty record is counted as skipped.
+                    frame = self._flush_record(record)
+                    if frame is not None:
+                        yield frame
+                    continue
 
-            if not record.is_active or record.is_skipped:
-                # We are either outside a record or ignoring the body of a
-                # record already classified as skipped. Wait for a header or
-                # delimiter to change parser state.
-                continue
+                if not record.is_active or record.is_skipped:
+                    # We are either outside a record or ignoring the body of a
+                    # record already classified as skipped. Wait for a header
+                    # or delimiter to change parser state.
+                    continue
 
-            # We are inside an active record. The first payload line decides
-            # whether this is SIP-like enough to convert; later payload lines
-            # are preserved.
-            if not record.add_payload_line(line):
-                self.skipped_non_sip += 1
+                # We are inside an active record. The first payload line
+                # decides whether this is SIP-like enough to convert; later
+                # payload lines are preserved.
+                if not record.add_payload_line(line):
+                    self.skipped_non_sip += 1
 
-        # EOF before a delimiter means the active record may be truncated by
-        # log rotation, so it is counted but not converted.
-        if record.is_active and not record.is_skipped:
-            self.skipped_incomplete += 1
+            # EOF before a delimiter means the active record may be truncated
+            # by log rotation, so it is counted but not converted.
+            if record.is_active and not record.is_skipped:
+                self.skipped_incomplete += 1
 
 
 def main() -> None:
@@ -758,8 +808,6 @@ def main() -> None:
             pcap.write(frame)
     if settings.summary:
         sys.stderr.write(reader.summary())
-    settings.file.close()
-    settings.output.close()
 
 
 if __name__ == '__main__':
