@@ -65,8 +65,6 @@ SIPMSG_HEADER_CANDIDATE = re.compile(
     rb'^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) {1,2}\d{1,2} '
 )
 SIPMSG_WORD_PAYLOAD = re.compile(rb'^\w')
-# types
-IP_type = typing.Union['IPv4', 'IPv6']
 
 
 def configure() -> argparse.Namespace:
@@ -169,7 +167,7 @@ class Frame:
     __slots__ = ['seconds', 'microseconds', 'packet']
 
     def __init__(self, seconds: int, microseconds: int,
-                 packet: IP_type) -> None:
+                 packet: typing.Union['IPv4', 'IPv6']) -> None:
         self.seconds = seconds
         self.microseconds = microseconds
         self.packet = packet
@@ -470,11 +468,8 @@ class SipMsgRecordState:
         return b''.join(self.payload or [])
 
     def to_record(self) -> typing.Optional['SipMsgRecord']:
-        if self.header is None:
-            return None
-        if self.timestamp is None:
-            return None
-        if self.payload is None:
+        if self.header is None or self.timestamp is None or \
+                self.payload is None:
             return None
 
         return SipMsgRecord(
