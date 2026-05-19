@@ -162,7 +162,7 @@ class PacketCapture:
 
     The writer opens the output path on context entry and closes it on exit.
     """
-    __slots__ = ['path', 'compressed', 'output']
+    __slots__ = ('path', 'compressed', 'output')
 
     def __init__(self, path: pathlib.Path, compressed: bool) -> None:
         self.path = path
@@ -213,7 +213,7 @@ class Frame:
     Packet Capture Frame bytes representation based on
     https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/
     """
-    __slots__ = ['seconds', 'microseconds', 'packet']
+    __slots__ = ('seconds', 'microseconds', 'packet')
 
     def __init__(self, seconds: int, microseconds: int,
                  packet: typing.Union['IPv4', 'IPv6']) -> None:
@@ -235,8 +235,9 @@ class UDP:
     """
     User Datagram Protocol bytes representation based on RFC 768.
     """
-    __slots__ = ['source', 'destination', 'data',
-                 'ip_source', 'ip_destination', 'length']
+    __slots__ = ('source', 'destination', 'data',
+                 'ip_source', 'ip_destination', 'length')
+
     number = 17  # RFC 1700
 
     def __init__(self, source: int, destination: int, data: bytes) -> None:
@@ -293,7 +294,8 @@ class IP:
     """
     An abstract class for commons of Internet Protocol version 4 and version 6.
     """
-    __slots__ = ['source', 'destination', 'transport', 'length']
+    __slots__ = ('source', 'destination', 'transport', 'length')
+
     offset = 0
 
     def __init__(self, source: int, destination: int, transport: UDP) -> None:
@@ -391,6 +393,10 @@ class SipMsgRecordHeader:
     The log header itself has no year. The year is resolved later from file
     mtime and chronological order of valid log headers.
     """
+    __slots__ = ('month', 'day', 'hour', 'minute', 'second', 'microsecond',
+                 'source_ip', 'source_port',
+                 'destination_ip', 'destination_port')
+
     month: int
     day: int
     hour: int
@@ -403,7 +409,6 @@ class SipMsgRecordHeader:
     destination_port: int
 
 
-@dataclasses.dataclass
 class SipTimestampResolver:
     """
     Resolve missing sipmsg.log years while preserving log order.
@@ -414,13 +419,12 @@ class SipTimestampResolver:
     move backward in UTC; DST fold=1 is used only when it prevents a false
     fall-back rollover.
     """
-    timezone: datetime.tzinfo
-    start_year: int
-    current_year: int = dataclasses.field(init=False)
-    previous_utc: typing.Optional[datetime.datetime] = None
+    __slots__ = ('timezone', 'start_year', 'current_year', 'previous_utc')
 
-    def __post_init__(self) -> None:
-        self.current_year = self.start_year
+    def __init__(self, timezone: datetime.tzinfo, start_year: int) -> None:
+        self.timezone = timezone
+        self.start_year = self.current_year = start_year
+        self.previous_utc = None
 
     def _fold_candidates(
             self, header: SipMsgRecordHeader
@@ -464,7 +468,6 @@ class SipTimestampResolver:
             self.current_year += 1
 
 
-@dataclasses.dataclass
 class SipMsgRecordState:
     """
     Mutable state for the record currently being read.
@@ -473,10 +476,13 @@ class SipMsgRecordState:
     current header, resolved timestamp, payload lines, and skip state until a
     delimiter confirms that the record is complete.
     """
-    header: typing.Optional[SipMsgRecordHeader] = None
-    timestamp: typing.Optional[datetime.datetime] = None
-    payload: typing.Optional[typing.List[bytes]] = None
-    is_skipped: bool = False
+    __slots__ = ('header', 'timestamp', 'payload', 'is_skipped')
+
+    def __init__(self):
+        self.header: typing.Optional[SipMsgRecordHeader] = None
+        self.timestamp: typing.Optional[datetime.datetime] = None
+        self.payload: typing.Optional[typing.List[bytes]] = None
+        self.is_skipped: bool = False
 
     @property
     def is_active(self) -> bool:
@@ -533,6 +539,8 @@ class SipMsgRecord:
     """
     Complete SIP record that can be converted into a PCAP frame.
     """
+    __slots__ = ('timestamp', 'header', 'payload')
+
     timestamp: datetime.datetime
     header: SipMsgRecordHeader
     payload: bytes
@@ -555,6 +563,10 @@ class SipMsgLogFile:
     chronology. Records not closed by the exact 40-dash delimiter are treated
     as incomplete and skipped.
     """
+    __slots__ = ('path', 'converted', 'skipped_non_sip', 'skipped_malformed',
+                 'skipped_timestamp', 'skipped_empty', 'skipped_incomplete',
+                 'timezone')
+
     def __init__(self, path: pathlib.Path, timezone: str) -> None:
         self.path = path
         self.converted = 0
