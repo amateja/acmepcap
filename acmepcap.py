@@ -98,7 +98,7 @@ def configure() -> argparse.Namespace:
         '-t', '--timezone',
         default='UTC',
         choices=zoneinfo.available_timezones(),
-        help='SBC timezone as tz database identifier defaults to UTC',
+        help='SBC timezone as a tz database identifier (default: UTC)',
         metavar='TIMEZONE'
     )
     parser.add_argument(

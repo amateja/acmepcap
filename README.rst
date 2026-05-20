@@ -53,7 +53,7 @@ options:
     -o OUTPUT, --output OUTPUT
                           output packet capture file
     -t TIMEZONE, --timezone TIMEZONE
-                          SBC timezone as a tz database identifier (defaults to UTC)
+                          SBC timezone as a tz database identifier (default: UTC)
     --summary             print conversion summary to stderr
 
 Minimal set of parameters (UTC assumed):
