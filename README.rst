@@ -54,6 +54,7 @@ options:
                           output packet capture file
     -t TIMEZONE, --timezone TIMEZONE
                           SBC timezone as a tz database identifier (defaults to UTC)
+    --summary             print conversion summary to stderr
 
 Minimal set of parameters (UTC assumed):
 
@@ -65,7 +66,7 @@ All parameters in use:
 
 ::
 
-    acmepcap -f sipmsg.log -o my.pcap.gz -c -t Europe/Warsaw
+    acmepcap -f sipmsg.log -o my.pcap.gz -c -t Europe/Warsaw --summary
 
 Questions & Answers
 ===================
