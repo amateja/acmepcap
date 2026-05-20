@@ -1,4 +1,5 @@
 import datetime
+import ipaddress
 import pathlib
 import tempfile
 import time
@@ -71,6 +72,62 @@ class ReaderTest(unittest.TestCase):
 
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].seconds, int(now.timestamp()))
+
+    def test_outgoing_packet_direction_and_payload(self):
+        """
+        Use local address as packet source for outgoing SIP records.
+        """
+        now = datetime.datetime.now(tz=UTC)
+        date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
+        source_ip = ipaddress.IPv4Address('10.0.0.1')
+        source_port = 5060
+        destination_ip = ipaddress.IPv4Address('10.0.0.2')
+        destination_port = 5070
+        payload = 'INVITE sip:user@example.com SIP/2.0\r\n'
+        buffer = f'{date} On {source_ip}:{source_port} ' \
+            f'sent to {destination_ip}:{destination_port}\n' \
+            f'{payload}----------------------------------------\n'.encode()
+        self.sipmsg_path.write_bytes(buffer)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+            frame, = list(sip_msg)
+
+        packet = frame.packet
+        segment = packet.transport
+        self.assertEqual(packet.source, int(source_ip))
+        self.assertEqual(packet.destination, int(destination_ip))
+        self.assertEqual(segment.source, source_port)
+        self.assertEqual(segment.destination, destination_port)
+        self.assertEqual(segment.data, payload.encode())
+
+    def test_incoming_packet_direction_and_payload(self):
+        """
+        Use remote address as packet source for incoming SIP records.
+        """
+        now = datetime.datetime.now(tz=UTC)
+        date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
+        source_ip = ipaddress.IPv4Address('10.0.0.2')
+        source_port = 5070
+        destination_ip = ipaddress.IPv4Address('10.0.0.1')
+        destination_port = 5060
+        payload = 'SIP/2.0 200 OK\r\n'
+        buffer = f'{date} On {destination_ip}:{destination_port} ' \
+            f'received from {source_ip}:{source_port}\n' \
+            f'{payload}----------------------------------------\n'.encode()
+        self.sipmsg_path.write_bytes(buffer)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+            frame, = list(sip_msg)
+
+        packet = frame.packet
+        segment = packet.transport
+        self.assertEqual(packet.source, int(source_ip))
+        self.assertEqual(packet.destination, int(destination_ip))
+        self.assertEqual(segment.source, source_port)
+        self.assertEqual(segment.destination, destination_port)
+        self.assertEqual(segment.data, payload.encode())
 
     def test_read_multiline_payload(self):
         """
