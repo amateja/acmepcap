@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0] - 2026-05-21
+
+### Added
+
+- Added `--summary` to report converted and skipped record counts.
+
+### Changed
+
+- Changed final records without exact 40-dash delimiters to be counted as
+  incomplete and skipped instead of converted.
+- Changed CLI file handling to validate input and output paths before opening
+  files, avoiding output creation or truncation during argument parsing.
+
 ## [0.2.0] - 2026-05-13
 
 ### Changed
