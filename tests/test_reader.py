@@ -129,6 +129,62 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(segment.destination, destination_port)
         self.assertEqual(segment.data, payload.encode())
 
+    def test_ipv6_outgoing_packet_direction_and_payload(self):
+        """
+        Parse bracketed IPv6 endpoints and keep outgoing packet direction.
+        """
+        now = datetime.datetime.now(tz=UTC)
+        date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
+        source_ip = ipaddress.IPv6Address('fdf7:e81e:55c4:10::53')
+        source_port = 5060
+        destination_ip = ipaddress.IPv6Address('fdf7:e81e:55c4:10::20')
+        destination_port = 5070
+        payload = 'INVITE sip:user@example.com SIP/2.0\r\n'
+        buffer = f'{date} On [0:0][{source_ip}]:{source_port} ' \
+            f'sent to [{destination_ip}]:{destination_port}\n' \
+            f'{payload}----------------------------------------\n'.encode()
+        self.sipmsg_path.write_bytes(buffer)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+            frame, = list(sip_msg)
+
+        packet = frame.packet
+        segment = packet.transport
+        self.assertEqual(packet.source, int(source_ip))
+        self.assertEqual(packet.destination, int(destination_ip))
+        self.assertEqual(segment.source, source_port)
+        self.assertEqual(segment.destination, destination_port)
+        self.assertEqual(segment.data, payload.encode())
+
+    def test_ipv6_incoming_packet_direction_and_payload(self):
+        """
+        Parse bracketed IPv6 endpoints and keep incoming packet direction.
+        """
+        now = datetime.datetime.now(tz=UTC)
+        date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
+        source_ip = ipaddress.IPv6Address('fdf7:e81e:55c4:10::20')
+        source_port = 5070
+        destination_ip = ipaddress.IPv6Address('fdf7:e81e:55c4:10::53')
+        destination_port = 5060
+        payload = 'SIP/2.0 200 OK\r\n'
+        buffer = f'{date} On [0:0][{destination_ip}]:{destination_port} ' \
+            f'received from [{source_ip}]:{source_port}\n' \
+            f'{payload}----------------------------------------\n'.encode()
+        self.sipmsg_path.write_bytes(buffer)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+            frame, = list(sip_msg)
+
+        packet = frame.packet
+        segment = packet.transport
+        self.assertEqual(packet.source, int(source_ip))
+        self.assertEqual(packet.destination, int(destination_ip))
+        self.assertEqual(segment.source, source_port)
+        self.assertEqual(segment.destination, destination_port)
+        self.assertEqual(segment.data, payload.encode())
+
     def test_read_multiline_payload(self):
         """
         Preserve all lines of a multi-line SIP payload.
@@ -260,6 +316,54 @@ class ReaderTest(unittest.TestCase):
             b'spam\n' \
             b'----------------------------------------\n' \
             b'Sep 10 15:40:34.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
+            b'spam\n' \
+            b'----------------------------------------\n'
+        self.sipmsg_path.write_bytes(buffer)
+        mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime',
+                   return_value=mtime.timestamp()):
+            frames = list(sip_msg)
+
+        self.assertEqual(len(frames), 1)
+        self.assertEqual(sip_msg.skipped_malformed, 1)
+
+    def test_skip_invalid_ipv6_and_yield_next_valid_record(self):
+        """
+        Continue after a malformed bracketed IPv6 header.
+        """
+        buffer = \
+            b'Sep 10 15:40:33.054 On [0:0][fdf7:e81e:55c4:::53]:5060 ' \
+            b'sent to [fdf7:e81e:55c4:10::20]:5060\n' \
+            b'spam\n' \
+            b'----------------------------------------\n' \
+            b'Sep 10 15:40:34.054 On [0:0][fdf7:e81e:55c4:10::53]:5060 ' \
+            b'sent to [fdf7:e81e:55c4:10::20]:5060\n' \
+            b'spam\n' \
+            b'----------------------------------------\n'
+        self.sipmsg_path.write_bytes(buffer)
+        mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime',
+                   return_value=mtime.timestamp()):
+            frames = list(sip_msg)
+
+        self.assertEqual(len(frames), 1)
+        self.assertEqual(sip_msg.skipped_malformed, 1)
+
+    def test_skip_mixed_ip_family_and_yield_next_valid_record(self):
+        """
+        Continue after a header mixing IPv4 and IPv6 endpoints.
+        """
+        buffer = \
+            b'Sep 10 15:40:33.054 On [0:0]192.0.2.1:5060 ' \
+            b'sent to [2001:db8::1]:5060\n' \
+            b'spam\n' \
+            b'----------------------------------------\n' \
+            b'Sep 10 15:40:34.054 On [0:0][2001:db8::2]:5060 ' \
+            b'sent to [2001:db8::1]:5060\n' \
             b'spam\n' \
             b'----------------------------------------\n'
         self.sipmsg_path.write_bytes(buffer)

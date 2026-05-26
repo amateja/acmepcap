@@ -56,10 +56,10 @@ SIPMSG_HEADER = re.compile(
     rb'(?P<hour>\d{1,2}):(?P<minute>\d{2}):(?P<second>\d{2})\.'
     rb'(?P<millisecond>\d{3}) On '
     rb'(?:\[\d+:\d+])?'
-    rb'(?P<local_ip>\d{1,3}(?:\.\d{1,3}){3}):'
+    rb'(?P<local_ip>\d{1,3}(?:\.\d{1,3}){3}|\[[0-9A-Fa-f:.]+]):'
     rb'(?P<local_port>\d{1,5}) '
     rb'(?P<direction>sent to|received from) '
-    rb'(?P<remote_ip>\d{1,3}(?:\.\d{1,3}){3}):'
+    rb'(?P<remote_ip>\d{1,3}(?:\.\d{1,3}){3}|\[[0-9A-Fa-f:.]+]):'
     rb'(?P<remote_port>\d{1,5})$'
 )
 SIPMSG_HEADER_CANDIDATE = re.compile(
@@ -360,8 +360,6 @@ class IPv4(IP):
         ) + bytes(self.transport)
 
 
-# TODO: So far no sipmsg.log with SIP over IPv6 was parsed. The IPv6 class
-#  is just for future use.
 class IPv6(IP):
     """
     Internet Protocol version 6 bytes representation based on RFC 2460.
@@ -394,6 +392,7 @@ class SipMsgRecordHeader:
     mtime and chronological order of valid log headers.
     """
     __slots__ = ('month', 'day', 'hour', 'minute', 'second', 'microsecond',
+                 'ip_class',
                  'source_ip', 'source_port',
                  'destination_ip', 'destination_port')
 
@@ -403,6 +402,7 @@ class SipMsgRecordHeader:
     minute: int
     second: int
     microsecond: int
+    ip_class: typing.Type[IP]
     source_ip: int
     source_port: int
     destination_ip: int
@@ -607,22 +607,28 @@ class SipMsgLogFile:
 
         try:
             header = match.groupdict()
-            local_ip = int(ipaddress.ip_address(header['local_ip'].decode()))
-            remote_ip = int(ipaddress.ip_address(header['remote_ip'].decode()))
+            local_ip_str = header['local_ip'].strip(b'[]').decode()
+            local_ip = ipaddress.ip_address(local_ip_str)
+            remote_ip_str = header['remote_ip'].strip(b'[]').decode()
+            remote_ip = ipaddress.ip_address(remote_ip_str)
             local_port = self._parse_port(header['local_port'])
             remote_port = self._parse_port(header['remote_port'])
         except (KeyError, ValueError):
             return None
 
+        if local_ip.version != remote_ip.version:
+            return None
+        ip_class = IPv4 if local_ip.version == 4 else IPv6
+
         if header['direction'] == b'sent to':
-            source_ip = local_ip
+            source_ip = int(local_ip)
             source_port = local_port
-            destination_ip = remote_ip
+            destination_ip = int(remote_ip)
             destination_port = remote_port
         else:
-            source_ip = remote_ip
+            source_ip = int(remote_ip)
             source_port = remote_port
-            destination_ip = local_ip
+            destination_ip = int(local_ip)
             destination_port = local_port
 
         return SipMsgRecordHeader(
@@ -632,6 +638,7 @@ class SipMsgLogFile:
             minute=int(header['minute']),
             second=int(header['second']),
             microsecond=int(header['millisecond']) * 1000,
+            ip_class=ip_class,
             source_ip=source_ip,
             source_port=source_port,
             destination_ip=destination_ip,
@@ -738,7 +745,7 @@ class SipMsgLogFile:
                 header.destination_port,
                 completed.payload,
             )
-            ip = IPv4(header.source_ip, header.destination_ip, udp)
+            ip = header.ip_class(header.source_ip, header.destination_ip, udp)
             self.converted += 1
             record.reset()
             return Frame(seconds, header.microsecond, ip)
