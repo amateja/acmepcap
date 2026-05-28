@@ -656,7 +656,7 @@ class ReaderTest(unittest.TestCase):
             datetime.datetime(2024, 7, 31, 12, 1, 2, 3000, tzinfo=UTC),
             datetime.datetime(2024, 8, 1, 10, 11, 2, 3000, tzinfo=UTC),
             datetime.datetime(2025, 6, 10, 23, 0, 40, 443000, tzinfo=UTC),
-            datetime.datetime(2026, 3, 8, 17, 18, 19, 202000, tzinfo=UTC),
+            datetime.datetime(2026, 3, 8, 17, 18, 19, 202000, tzinfo=UTC)
         ]
         self.assertEqual(len(frames), len(expected))
         self.assertEqual([frame.seconds for frame in frames],

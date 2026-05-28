@@ -6,7 +6,7 @@ build-backend = 'setuptools.build_meta'
 name = 'acmepcap'
 dynamic = ['version']
 authors = [
-  {name='Andrzej Mateja', email='mateja.and@gmail.com'},
+  {name='Andrzej Mateja', email='mateja.and@gmail.com'}
 ]
 description = 'Acme Packet sipmsg.log to packet capture converter.'
 readme = 'README.rst'

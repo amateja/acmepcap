@@ -26,7 +26,7 @@ __all__ = [
     'SNAP_LEN',
     'SipMsgLogFile',
     'TTL',
-    'UDP',
+    'UDP'
 ]
 
 # constants
@@ -101,24 +101,24 @@ def configure() -> argparse.Namespace:
     :return: settings
     """
     parser = argparse.ArgumentParser(
-        description='Acme Packet sipmsg.log to packet capture converter.',
+        description='Acme Packet sipmsg.log to packet capture converter.'
     )
     parser.add_argument(
         '-f', '--file',
         type=input_path,
         required=True,
-        help='sipmsg.log file',
+        help='sipmsg.log file'
     )
     parser.add_argument(
         '-c', '--compress',
         action='store_true',
-        help='compress output packet capture file',
+        help='compress output packet capture file'
     )
     parser.add_argument(
         '-o', '--output',
         type=output_path,
         required=True,
-        help='output packet capture file',
+        help='output packet capture file'
     )
     parser.add_argument(
         '-t', '--timezone',
@@ -130,7 +130,7 @@ def configure() -> argparse.Namespace:
     parser.add_argument(
         '--summary',
         action='store_true',
-        help='print conversion summary to stderr',
+        help='print conversion summary to stderr'
     )
     return parser.parse_args()
 
@@ -299,7 +299,7 @@ class UDP:
             # udp header part
             self.source,
             self.destination,
-            self.length,
+            self.length
         )
         header = sum(vector)
         high = sum(i << 8 for i in self.data[::2])
@@ -592,7 +592,7 @@ class SipMsgRecordState:
         return SipMsgRecord(
             timestamp=self.timestamp,
             header=self.header,
-            payload=self.payload_bytes(),
+            payload=self.payload_bytes()
         )
 
 
@@ -705,7 +705,7 @@ class SipMsgLogFile:
             source_ip=source_ip,
             source_port=source_port,
             destination_ip=destination_ip,
-            destination_port=destination_port,
+            destination_port=destination_port
         )
 
     def _mtime_reference(self) -> datetime.datetime:
@@ -807,7 +807,7 @@ class SipMsgLogFile:
             udp = UDP(
                 header.source_port,
                 header.destination_port,
-                completed.payload,
+                completed.payload
             )
             ip = header.ip_class(header.source_ip, header.destination_ip, udp)
             self.converted += 1
