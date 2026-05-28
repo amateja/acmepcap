@@ -6,7 +6,8 @@ import time
 import unittest
 from unittest.mock import patch
 
-from acmepcap import SipMsgLogFile
+from acmepcap import MAX_IPV4_UDP_PAYLOAD, MAX_IPV6_UDP_PAYLOAD, \
+    SipMsgLogFile
 
 UTC = datetime.timezone.utc
 
@@ -184,6 +185,107 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(segment.source, source_port)
         self.assertEqual(segment.destination, destination_port)
         self.assertEqual(segment.data, payload.encode())
+
+    def test_ipv4_maximum_udp_payload_converts(self):
+        """
+        Convert the largest SIP payload that fits in one UDP/IPv4 packet.
+        """
+        now = datetime.datetime.now(tz=UTC)
+        date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
+        payload = 'x' * (MAX_IPV4_UDP_PAYLOAD - 2)
+        buffer = f'{date} On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
+            f'{payload}\r\n' \
+            '----------------------------------------\n'.encode()
+        self.sipmsg_path.write_bytes(buffer)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+            frame, = list(sip_msg)
+
+        self.assertEqual(len(frame.packet.transport.data),
+                         MAX_IPV4_UDP_PAYLOAD)
+        self.assertEqual(sip_msg.converted, 1)
+        self.assertEqual(sip_msg.skipped_oversized, 0)
+
+    def test_ipv4_oversized_udp_payload_is_skipped(self):
+        """
+        Skip SIP payloads too large for one UDP/IPv4 packet.
+        """
+        now = datetime.datetime.now(tz=UTC)
+        date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
+        payload = 'x' * (MAX_IPV4_UDP_PAYLOAD - 1)
+        buffer = f'{date} On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
+            f'{payload}\r\n' \
+            '----------------------------------------\n'.encode()
+        self.sipmsg_path.write_bytes(buffer)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+            list(sip_msg)
+
+        self.assertEqual(sip_msg.converted, 0)
+        self.assertEqual(sip_msg.skipped_oversized, 1)
+
+    def test_multiline_oversized_udp_payload_is_skipped(self):
+        """
+        Skip records that become too large after later payload lines.
+        """
+        first_line = 'INVITE sip:user@example.com SIP/2.0\r\n'
+        fill_size = MAX_IPV4_UDP_PAYLOAD - len(first_line) - 1
+        second_line = 'x' * fill_size + '\r\n'
+        buffer = \
+            'Sep 10 15:40:33.054 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
+            f'{first_line}' \
+            f'{second_line}' \
+            '----------------------------------------\n'.encode()
+        self.sipmsg_path.write_bytes(buffer)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+            list(sip_msg)
+
+        self.assertEqual(sip_msg.converted, 0)
+        self.assertEqual(sip_msg.skipped_oversized, 1)
+
+    def test_ipv6_maximum_udp_payload_converts(self):
+        """
+        Convert the largest SIP payload that fits in one UDP/IPv6 packet.
+        """
+        now = datetime.datetime.now(tz=UTC)
+        date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
+        payload = 'x' * (MAX_IPV6_UDP_PAYLOAD - 2)
+        buffer = f'{date} On [2001:db8::1]:5060 sent to [2001:db8::2]:5060\n' \
+            f'{payload}\r\n' \
+            '----------------------------------------\n'.encode()
+        self.sipmsg_path.write_bytes(buffer)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+            frame, = list(sip_msg)
+
+        self.assertEqual(len(frame.packet.transport.data),
+                         MAX_IPV6_UDP_PAYLOAD)
+        self.assertEqual(sip_msg.converted, 1)
+        self.assertEqual(sip_msg.skipped_oversized, 0)
+
+    def test_ipv6_oversized_udp_payload_is_skipped(self):
+        """
+        Skip SIP payloads too large for one UDP/IPv6 packet.
+        """
+        now = datetime.datetime.now(tz=UTC)
+        date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
+        payload = 'x' * (MAX_IPV6_UDP_PAYLOAD - 1)
+        buffer = f'{date} On [2001:db8::1]:5060 sent to [2001:db8::2]:5060\n' \
+                 f'{payload}\r\n' \
+                 '----------------------------------------\n'.encode()
+        self.sipmsg_path.write_bytes(buffer)
+        sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+
+        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+            list(sip_msg)
+
+        self.assertEqual(sip_msg.converted, 0)
+        self.assertEqual(sip_msg.skipped_oversized, 1)
 
     def test_read_multiline_payload(self):
         """

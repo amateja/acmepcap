@@ -1,7 +1,7 @@
 import ipaddress
 import unittest
 
-from acmepcap import IPv4, UDP
+from acmepcap import IPv4, MAX_UINT16, UDP
 
 
 class TestUdpChecksum(unittest.TestCase):
@@ -43,3 +43,12 @@ class TestUdpChecksum(unittest.TestCase):
         udp = UDP(src_port, dst_port, payload)
         IPv4(src_ip, dst_ip, udp)
         self.assertEqual(udp.checksum, 0xffff)
+
+    def test_rejects_length_overflow(self):
+        """
+        Reject payloads that cannot fit into the UDP Length field.
+        """
+        payload = b'x' * (MAX_UINT16 - UDP.offset + 1)
+
+        with self.assertRaises(ValueError):
+            UDP(1001, 1002, payload)

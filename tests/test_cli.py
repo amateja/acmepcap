@@ -137,7 +137,8 @@ class TestMain(unittest.TestCase):
     def tearDown(self):
         self.tmpdir.cleanup()
 
-    def configure(self, compress: bool, payload=b'') -> argparse.Namespace:
+    def configure(self, compress: bool, payload=b'',
+                  summary: bool = False) -> argparse.Namespace:
         """
         Mock acmepcap.configure with temporary input/output paths.
         """
@@ -147,7 +148,7 @@ class TestMain(unittest.TestCase):
             compress=compress,
             output=self.output_path,
             timezone='UTC',
-            summary=False,
+            summary=summary
         )
 
     def test_with_compression(self):
@@ -195,9 +196,9 @@ class TestMain(unittest.TestCase):
             b'Jun 21 12:13:14.567 On [0:0]1.1.1.1:5060 '
             b'sent to 2.2.2.2:5060\n'
             b' spam\n'
-            b'----------------------------------------\n'
+            b'----------------------------------------\n',
+            True
         )
-        settings.summary = True
         stderr = io.StringIO()
 
         with patch('acmepcap.configure', return_value=settings), \
@@ -215,4 +216,34 @@ class TestMain(unittest.TestCase):
             '  skipped timestamp records: 0\n'
             '  skipped empty records: 0\n'
             '  skipped incomplete records: 0\n'
+            '  skipped oversized records: 0\n'
+        )
+
+    def test_summary_reports_oversized_records(self):
+        payload = 'x' * (acmepcap.MAX_IPV4_UDP_PAYLOAD - 1)
+        settings = self.configure(
+            False,
+            'Jun 21 12:13:14.567 On [0:0]1.1.1.1:5060 sent to 2.2.2.2:5060\n'
+            f'{payload}\r\n'
+            f'----------------------------------------\n'.encode(),
+            True
+        )
+        stderr = io.StringIO()
+
+        with patch('acmepcap.configure', return_value=settings), \
+                patch('acmepcap.os.path.getmtime', return_value=time.time()), \
+                patch('sys.stderr', stderr):
+            acmepcap.main()
+
+        self.assertEqual(
+            stderr.getvalue(),
+            'Summary:\n'
+            '  converted records: 0\n'
+            '  skipped records: 1\n'
+            '  skipped non-SIP records: 0\n'
+            '  skipped malformed records: 0\n'
+            '  skipped timestamp records: 0\n'
+            '  skipped empty records: 0\n'
+            '  skipped incomplete records: 0\n'
+            '  skipped oversized records: 1\n'
         )

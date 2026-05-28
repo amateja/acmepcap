@@ -18,6 +18,9 @@ __all__ = [
     'IPv4',
     'IPv6',
     'LINKTYPE_RAW',
+    'MAX_IPV4_UDP_PAYLOAD',
+    'MAX_IPV6_UDP_PAYLOAD',
+    'MAX_UINT16',
     'PacketCapture',
     'SNAP_LEN',
     'SipMsgLogFile',
@@ -28,9 +31,25 @@ __all__ = [
 # constants
 ENDIANNESS = '='  # native
 TTL = 64
+# Maximum value of 16-bit unsigned protocol length fields.
+MAX_UINT16 = 65535
+# UDP Length includes the UDP header and payload.
+UDP_HEADER_LENGTH = 8
+# This implementation writes IPv4 packets without options.
+IPV4_HEADER_LENGTH = 20
+# IPv6 has a fixed base header size.
+IPV6_HEADER_LENGTH = 40
 # https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcaplinktype/
 LINKTYPE_RAW = 101
-SNAP_LEN = 65535
+# Large enough for the largest normal IPv6 packet: 40-byte IPv6 header plus
+# the maximum 16-bit IPv6 Payload Length.
+SNAP_LEN = 65575
+# Maximum SIP payload this tool can place in one UDP/IPv4 packet:
+# IPv4 Total Length 65535 - IPv4 header 20 - UDP header 8.
+MAX_IPV4_UDP_PAYLOAD = 65507
+# Maximum SIP payload this tool can place in one normal UDP/IPv6 packet:
+# IPv6 Payload Length 65535 - UDP header 8.
+MAX_IPV6_UDP_PAYLOAD = 65527
 UTC = datetime.timezone.utc
 # Month abbreviation to number mapping. Used instead of datetime.strptime
 # for performance in tight parsing loops and because of sensitivity to locale
@@ -66,6 +85,10 @@ SIPMSG_HEADER_CANDIDATE = re.compile(
     rb'^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) {1,2}\d{1,2} '
 )
 SIPMSG_WORD_PAYLOAD = re.compile(rb'^\w')
+# Result codes for classifying payload-line parsing outcomes.
+ACCEPTED = 0
+NON_SIP = 1
+OVERSIZED = 2
 
 
 def configure() -> argparse.Namespace:
@@ -217,6 +240,8 @@ class Frame:
 
     def __init__(self, seconds: int, microseconds: int,
                  packet: typing.Union['IPv4', 'IPv6']) -> None:
+        if packet.length > SNAP_LEN:
+            raise ValueError('packet length exceeds PCAP snap length')
         self.seconds = seconds
         self.microseconds = microseconds
         self.packet = packet
@@ -239,6 +264,7 @@ class UDP:
                  'ip_source', 'ip_destination', 'length')
 
     number = 17  # RFC 1700
+    offset = UDP_HEADER_LENGTH
 
     def __init__(self, source: int, destination: int, data: bytes) -> None:
         self.source = source & 65535
@@ -246,7 +272,9 @@ class UDP:
         self.data = data
         self.ip_source = 0
         self.ip_destination = 0
-        self.length = len(data) + 8
+        self.length = len(data) + self.offset
+        if self.length > MAX_UINT16:
+            raise ValueError('UDP length exceeds 16-bit field')
 
     @property
     def checksum(self) -> int:
@@ -297,12 +325,16 @@ class IP:
     __slots__ = ('source', 'destination', 'transport', 'length')
 
     offset = 0
+    max_length = 0
+    max_udp_payload = 0
 
     def __init__(self, source: int, destination: int, transport: UDP) -> None:
         self.source = transport.ip_source = source
         self.destination = transport.ip_destination = destination
         self.transport = transport
         self.length = self.offset + transport.length
+        if self.length > self.max_length:
+            raise ValueError('IP packet length exceeds protocol limit')
 
     def __bytes__(self) -> bytes:
         raise NotImplementedError
@@ -312,7 +344,9 @@ class IPv4(IP):
     """
     Internet Protocol version 4 bytes representation based on RFC 760.
     """
-    offset = 20
+    offset = IPV4_HEADER_LENGTH
+    max_length = MAX_UINT16
+    max_udp_payload = MAX_IPV4_UDP_PAYLOAD
 
     @property
     def checksum(self) -> int:
@@ -364,7 +398,9 @@ class IPv6(IP):
     """
     Internet Protocol version 6 bytes representation based on RFC 2460.
     """
-    offset = 40
+    offset = IPV6_HEADER_LENGTH
+    max_length = SNAP_LEN
+    max_udp_payload = MAX_IPV6_UDP_PAYLOAD
 
     def __bytes__(self) -> bytes:
         # Assume Traffic Class = 0 (bits 4-11), Flow Label = 0 (12-31),
@@ -476,12 +512,15 @@ class SipMsgRecordState:
     current header, resolved timestamp, payload lines, and skip state until a
     delimiter confirms that the record is complete.
     """
-    __slots__ = ('header', 'timestamp', 'payload', 'is_skipped')
+    __slots__ = ('header', 'timestamp', 'payload', 'payload_size',
+                 'max_payload_size', 'is_skipped')
 
     def __init__(self):
         self.header: typing.Optional[SipMsgRecordHeader] = None
         self.timestamp: typing.Optional[datetime.datetime] = None
         self.payload: typing.Optional[typing.List[bytes]] = None
+        self.payload_size: int = 0
+        self.max_payload_size: int = 0
         self.is_skipped: bool = False
 
     @property
@@ -489,42 +528,55 @@ class SipMsgRecordState:
         return self.header is not None
 
     def start(self, header: SipMsgRecordHeader,
-              timestamp: typing.Optional[datetime.datetime]) -> None:
+              timestamp: typing.Optional[datetime.datetime],
+              max_payload_size: int) -> None:
         self.header = header
         self.timestamp = timestamp
         self.payload = None
+        self.payload_size = 0
+        self.max_payload_size = max_payload_size
         self.is_skipped = timestamp is None
 
     def reset(self) -> None:
         self.header = None
         self.timestamp = None
         self.payload = None
+        self.payload_size = 0
+        self.max_payload_size = 0
         self.is_skipped = False
 
-    def add_payload_line(self, line: bytes) -> bool:
+    def add_payload_line(self, line: bytes) -> int:
         """
-        Add a payload line and return whether the record remains convertible.
+        Add a payload line and return its parser outcome code.
 
         The first payload line decides if the record looks like SIP. Lines
         starting with whitespace are treated as non-SIP records and skipped.
         """
+        self.payload_size += len(line)
         if self.payload is None:
             if SIPMSG_WORD_PAYLOAD.match(line):
+                if self.payload_size > self.max_payload_size:
+                    self.is_skipped = True
+                    return OVERSIZED
                 self.payload = [line]
-                return True
+                return ACCEPTED
             else:
                 self.is_skipped = True
-                return False
+                return NON_SIP
 
+        if self.payload_size > self.max_payload_size:
+            self.is_skipped = True
+            self.payload = None
+            return OVERSIZED
         self.payload.append(line)
-        return True
+        return ACCEPTED
 
     def payload_bytes(self) -> bytes:
         return b''.join(self.payload or [])
 
     def to_record(self) -> typing.Optional['SipMsgRecord']:
         if self.header is None or self.timestamp is None or \
-                self.payload is None:
+                self.payload is None or self.is_skipped:
             return None
 
         return SipMsgRecord(
@@ -565,7 +617,7 @@ class SipMsgLogFile:
     """
     __slots__ = ('path', 'converted', 'skipped_non_sip', 'skipped_malformed',
                  'skipped_timestamp', 'skipped_empty', 'skipped_incomplete',
-                 'timezone')
+                 'skipped_oversized', 'timezone')
 
     def __init__(self, path: pathlib.Path, timezone: str) -> None:
         self.path = path
@@ -575,6 +627,7 @@ class SipMsgLogFile:
         self.skipped_timestamp = 0
         self.skipped_empty = 0
         self.skipped_incomplete = 0
+        self.skipped_oversized = 0
         # Dates in sipmsg.log are written in local timezone but there is no
         # information what timezone it is. To be accurate some external hint
         # is required.
@@ -701,7 +754,7 @@ class SipMsgLogFile:
         """
         skipped = self.skipped_non_sip + self.skipped_malformed + \
             self.skipped_timestamp + self.skipped_empty + \
-            self.skipped_incomplete
+            self.skipped_incomplete + self.skipped_oversized
         return 'Summary:\n' \
             f'  converted records: {self.converted}\n' \
             f'  skipped records: {skipped}\n' \
@@ -709,7 +762,8 @@ class SipMsgLogFile:
             f'  skipped malformed records: {self.skipped_malformed}\n' \
             f'  skipped timestamp records: {self.skipped_timestamp}\n' \
             f'  skipped empty records: {self.skipped_empty}\n' \
-            f'  skipped incomplete records: {self.skipped_incomplete}\n'
+            f'  skipped incomplete records: {self.skipped_incomplete}\n' \
+            f'  skipped oversized records: {self.skipped_oversized}\n'
 
     def _start_record(self, record: SipMsgRecordState,
                       header: SipMsgRecordHeader,
@@ -725,7 +779,7 @@ class SipMsgLogFile:
             timestamp = resolver.resolve(header)
         except ValueError:
             self.skipped_timestamp += 1
-        record.start(header, timestamp)
+        record.start(header, timestamp, header.ip_class.max_udp_payload)
 
     def _flush_record(
             self, record: SipMsgRecordState) -> typing.Optional[Frame]:
@@ -806,8 +860,9 @@ class SipMsgLogFile:
                 # We are inside an active record. The first payload line
                 # decides whether this is SIP-like enough to convert; later
                 # payload lines are preserved.
-                if not record.add_payload_line(line):
-                    self.skipped_non_sip += 1
+                payload_result = record.add_payload_line(line)
+                self.skipped_non_sip += int(payload_result == NON_SIP)
+                self.skipped_oversized += int(payload_result == OVERSIZED)
 
             # EOF before a delimiter means the active record may be truncated
             # by log rotation, so it is counted but not converted.

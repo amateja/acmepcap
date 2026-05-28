@@ -2,7 +2,7 @@ import functools
 import ipaddress
 from unittest import TestCase
 
-from acmepcap import IPv4, IPv6, TTL, UDP
+from acmepcap import IPv4, IPv6, MAX_IPV4_UDP_PAYLOAD, TTL, UDP
 
 
 class IPv4Test(TestCase):
@@ -47,6 +47,15 @@ class IPv4Test(TestCase):
         self.assertEqual(int_(raw[24:26]), 8)
         # Checksum
         self.assertEqual(int_(raw[26:28]), 0x74b7)
+
+    def test_rejects_total_length_overflow(self):
+        """
+        Reject IPv4 packets that cannot fit into Total Length.
+        """
+        payload = b'x' * (MAX_IPV4_UDP_PAYLOAD + 1)
+        udp = UDP(1001, 1002, payload)
+        with self.assertRaises(ValueError):
+            IPv4(0, 0, udp)
 
 
 class IPv6Test(TestCase):

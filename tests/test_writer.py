@@ -88,3 +88,14 @@ class TestPacketCapture(unittest.TestCase):
         self.assertEqual(int.from_bytes(raw[32:36], byteorder), ip.length)
         self.assertEqual(int.from_bytes(raw[36:40], byteorder), ip.length)
         self.assertEqual(len(raw), 68)
+
+    def test_rejects_packet_longer_than_snap_len(self):
+        """
+        Reject frames that cannot fit into the configured PCAP SnapLen.
+        """
+        udp = UDP(1001, 1002, b'')
+        too_long_packet = IPv4(0, 0, udp)
+        too_long_packet.length = SNAP_LEN + 1
+
+        with self.assertRaises(ValueError):
+            Frame(0, 0, too_long_packet)
