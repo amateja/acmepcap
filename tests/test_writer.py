@@ -27,14 +27,14 @@ def get_byteorder() -> typing.Literal['little', 'big']:
 
 
 class TestPacketCapture(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.tmpdir = tempfile.TemporaryDirectory()
         self.output_path = pathlib.Path(self.tmpdir.name) / 'output.pcap'
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         self.tmpdir.cleanup()
 
-    def test_file_header(self):
+    def test_file_header(self) -> None:
         """
         Verify Packet Capture file header fields.
         """
@@ -58,14 +58,15 @@ class TestPacketCapture(unittest.TestCase):
         self.assertEqual(int.from_bytes(raw[20:24], byteorder), LINKTYPE_RAW)
         self.assertEqual(len(raw), 24)
 
-    def test_exit_without_enter(self):
+    def test_exit_without_enter(self) -> None:
         """
-        Ignore context exit when no output file was opened.
+        Raise when context exit is called before context entry.
         """
-        PacketCapture(self.output_path, False).__exit__(None, None, None)
+        with self.assertRaises(RuntimeError):
+            PacketCapture(self.output_path, False).__exit__(None, None, None)
         self.assertFalse(self.output_path.exists())
 
-    def test_add_simple_frame(self):
+    def test_add_simple_frame(self) -> None:
         """
         Verify Packet Capture frame fields.
         """
@@ -89,7 +90,7 @@ class TestPacketCapture(unittest.TestCase):
         self.assertEqual(int.from_bytes(raw[36:40], byteorder), ip.length)
         self.assertEqual(len(raw), 68)
 
-    def test_rejects_packet_longer_than_snap_len(self):
+    def test_rejects_packet_longer_than_snap_len(self) -> None:
         """
         Reject frames that cannot fit into the configured PCAP SnapLen.
         """

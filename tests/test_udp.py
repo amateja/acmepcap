@@ -5,7 +5,7 @@ from acmepcap import IPv4, MAX_UINT16, UDP
 
 
 class TestUdpChecksum(unittest.TestCase):
-    def test_udp_checksum(self):
+    def test_udp_checksum(self) -> None:
         """
         UDP checksum calculation test scenario taken from
         http://profesores.elo.utfsm.cl/~agv/elo322/UDP_Checksum_HowTo.html
@@ -19,7 +19,7 @@ class TestUdpChecksum(unittest.TestCase):
         IPv4(src_ip, dst_ip, udp)
         self.assertEqual(udp.checksum, 0x14de)
 
-    def test_udp_checksum_with_no_network(self):
+    def test_udp_checksum_with_no_network(self) -> None:
         """
         Unlikely scenario only to make sure that script will not fail.
         """
@@ -29,7 +29,7 @@ class TestUdpChecksum(unittest.TestCase):
         udp = UDP(src_port, dst_port, payload)
         self.assertEqual(udp.checksum, 0xf80b)
 
-    def test_udp_checksum_all_zeros(self):
+    def test_udp_checksum_all_zeros(self) -> None:
         """
         A UDP checksum field of zero means the checksum is not used. When the
         computed one's-complement checksum is zero, it must be transmitted as
@@ -44,7 +44,7 @@ class TestUdpChecksum(unittest.TestCase):
         IPv4(src_ip, dst_ip, udp)
         self.assertEqual(udp.checksum, 0xffff)
 
-    def test_rejects_length_overflow(self):
+    def test_rejects_length_overflow(self) -> None:
         """
         Reject payloads that cannot fit into the UDP Length field.
         """

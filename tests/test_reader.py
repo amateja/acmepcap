@@ -13,14 +13,14 @@ UTC = datetime.timezone.utc
 
 
 class ReaderTest(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.tmpdir = tempfile.TemporaryDirectory()
         self.sipmsg_path = pathlib.Path(self.tmpdir.name) / 'sipmsg.log'
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         self.tmpdir.cleanup()
 
-    def test_read_empty(self):
+    def test_read_empty(self) -> None:
         """
         Simulate an input file with no content.
         """
@@ -31,7 +31,7 @@ class ReaderTest(unittest.TestCase):
         with patch('acmepcap.os.path.getmtime', return_value=time.time()):
             self.assertEqual(list(sip_msg), [])
 
-    def test_read_outgoing(self):
+    def test_read_outgoing(self) -> None:
         """
         Simulate a native input file with a sent message.
         """
@@ -55,7 +55,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(sip_msg.skipped_empty, 0)
         self.assertEqual(sip_msg.skipped_incomplete, 0)
 
-    def test_read_incoming(self):
+    def test_read_incoming(self) -> None:
         """
         Simulate a native input file with a received message.
         """
@@ -74,7 +74,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].seconds, int(now.timestamp()))
 
-    def test_outgoing_packet_direction_and_payload(self):
+    def test_outgoing_packet_direction_and_payload(self) -> None:
         """
         Use local address as packet source for outgoing SIP records.
         """
@@ -102,7 +102,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(segment.destination, destination_port)
         self.assertEqual(segment.data, payload.encode())
 
-    def test_incoming_packet_direction_and_payload(self):
+    def test_incoming_packet_direction_and_payload(self) -> None:
         """
         Use remote address as packet source for incoming SIP records.
         """
@@ -130,7 +130,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(segment.destination, destination_port)
         self.assertEqual(segment.data, payload.encode())
 
-    def test_ipv6_outgoing_packet_direction_and_payload(self):
+    def test_ipv6_outgoing_packet_direction_and_payload(self) -> None:
         """
         Parse bracketed IPv6 endpoints and keep outgoing packet direction.
         """
@@ -158,7 +158,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(segment.destination, destination_port)
         self.assertEqual(segment.data, payload.encode())
 
-    def test_ipv6_incoming_packet_direction_and_payload(self):
+    def test_ipv6_incoming_packet_direction_and_payload(self) -> None:
         """
         Parse bracketed IPv6 endpoints and keep incoming packet direction.
         """
@@ -186,7 +186,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(segment.destination, destination_port)
         self.assertEqual(segment.data, payload.encode())
 
-    def test_ipv4_maximum_udp_payload_converts(self):
+    def test_ipv4_maximum_udp_payload_converts(self) -> None:
         """
         Convert the largest SIP payload that fits in one UDP/IPv4 packet.
         """
@@ -207,7 +207,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(sip_msg.converted, 1)
         self.assertEqual(sip_msg.skipped_oversized, 0)
 
-    def test_ipv4_oversized_udp_payload_is_skipped(self):
+    def test_ipv4_oversized_udp_payload_is_skipped(self) -> None:
         """
         Skip SIP payloads too large for one UDP/IPv4 packet.
         """
@@ -226,7 +226,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(sip_msg.converted, 0)
         self.assertEqual(sip_msg.skipped_oversized, 1)
 
-    def test_multiline_oversized_udp_payload_is_skipped(self):
+    def test_multiline_oversized_udp_payload_is_skipped(self) -> None:
         """
         Skip records that become too large after later payload lines.
         """
@@ -247,7 +247,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(sip_msg.converted, 0)
         self.assertEqual(sip_msg.skipped_oversized, 1)
 
-    def test_ipv6_maximum_udp_payload_converts(self):
+    def test_ipv6_maximum_udp_payload_converts(self) -> None:
         """
         Convert the largest SIP payload that fits in one UDP/IPv6 packet.
         """
@@ -268,7 +268,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(sip_msg.converted, 1)
         self.assertEqual(sip_msg.skipped_oversized, 0)
 
-    def test_ipv6_oversized_udp_payload_is_skipped(self):
+    def test_ipv6_oversized_udp_payload_is_skipped(self) -> None:
         """
         Skip SIP payloads too large for one UDP/IPv6 packet.
         """
@@ -287,7 +287,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(sip_msg.converted, 0)
         self.assertEqual(sip_msg.skipped_oversized, 1)
 
-    def test_read_multiline_payload(self):
+    def test_read_multiline_payload(self) -> None:
         """
         Preserve all lines of a multi-line SIP payload.
         """
@@ -307,7 +307,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].packet.transport.data, payload.encode())
 
-    def test_read_flip_mtime(self):
+    def test_read_flip_mtime(self) -> None:
         """
         Simulate an input file from a tar archive with mtime from the past.
         """
@@ -326,7 +326,7 @@ class ReaderTest(unittest.TestCase):
         self.assertAlmostEqual(frames[0].seconds, int(now.timestamp()),
                                delta=366 * 24 * 60 * 60)
 
-    def test_read_single_digit_day(self):
+    def test_read_single_digit_day(self) -> None:
         """
         Parse syslog-style single digit days with two spaces after month.
         """
@@ -347,7 +347,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].seconds, int(expected.timestamp()))
 
-    def test_read_without_bracketed_context(self):
+    def test_read_without_bracketed_context(self) -> None:
         """
         Parse headers where the optional [network-interface:VLAN] context is
         absent.
@@ -365,7 +365,7 @@ class ReaderTest(unittest.TestCase):
 
         self.assertEqual(len(frames), 1)
 
-    def test_skip_non_sip_payload(self):
+    def test_skip_non_sip_payload(self) -> None:
         """
         Skip records whose payload starts with whitespace.
         """
@@ -387,7 +387,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(sip_msg.skipped_empty, 0)
         self.assertEqual(sip_msg.skipped_incomplete, 0)
 
-    def test_skip_malformed_record_and_yield_next_valid_record(self):
+    def test_skip_malformed_record_and_yield_next_valid_record(self) -> None:
         """
         Continue after a malformed record and extract later valid records.
         """
@@ -409,7 +409,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(sip_msg.skipped_malformed, 1)
 
-    def test_skip_invalid_port_and_yield_next_valid_record(self):
+    def test_skip_invalid_port_and_yield_next_valid_record(self) -> None:
         """
         Continue after a header containing an out-of-range UDP port.
         """
@@ -431,7 +431,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(sip_msg.skipped_malformed, 1)
 
-    def test_skip_invalid_ipv6_and_yield_next_valid_record(self):
+    def test_skip_invalid_ipv6_and_yield_next_valid_record(self) -> None:
         """
         Continue after a malformed bracketed IPv6 header.
         """
@@ -455,7 +455,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(sip_msg.skipped_malformed, 1)
 
-    def test_skip_mixed_ip_family_and_yield_next_valid_record(self):
+    def test_skip_mixed_ip_family_and_yield_next_valid_record(self) -> None:
         """
         Continue after a header mixing IPv4 and IPv6 endpoints.
         """
@@ -479,7 +479,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(sip_msg.skipped_malformed, 1)
 
-    def test_skip_impossible_date_and_yield_next_valid_record(self):
+    def test_skip_impossible_date_and_yield_next_valid_record(self) -> None:
         """
         Continue after a valid-looking header with an impossible date.
         """
@@ -503,7 +503,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(frames[0].seconds, int(expected.timestamp()))
         self.assertEqual(sip_msg.skipped_timestamp, 1)
 
-    def test_skip_empty_record_and_yield_next_valid_record(self):
+    def test_skip_empty_record_and_yield_next_valid_record(self) -> None:
         """
         Continue after a header without payload before delimiter.
         """
@@ -524,7 +524,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(sip_msg.skipped_empty, 1)
 
-    def test_leap_day_year_shift_skips_non_leap_years(self):
+    def test_leap_day_year_shift_skips_non_leap_years(self) -> None:
         """
         Continue shifting Feb 29 until the target year is valid.
         """
@@ -544,7 +544,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].seconds, int(expected.timestamp()))
 
-    def test_skip_final_message_without_delimiter(self):
+    def test_skip_final_message_without_delimiter(self) -> None:
         """
         Treat the final record as incomplete when the delimiter is missing.
         """
@@ -561,7 +561,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 0)
         self.assertEqual(sip_msg.skipped_incomplete, 1)
 
-    def test_two_pass_year_rollover(self):
+    def test_two_pass_year_rollover(self) -> None:
         """
         Use the last header to resolve December/January rollover.
         """
@@ -587,7 +587,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(frames[0].seconds, int(expected_first.timestamp()))
         self.assertEqual(frames[1].seconds, int(expected_second.timestamp()))
 
-    def test_three_pass_year_rollover(self):
+    def test_three_pass_year_rollover(self) -> None:
         """
         Use the last header to resolve December/January rollover.
         """
@@ -623,7 +623,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(frames[1].seconds, int(expected_second.timestamp()))
         self.assertEqual(frames[2].seconds, int(expected_third.timestamp()))
 
-    def test_multiyear_forward_rollover(self):
+    def test_multiyear_forward_rollover(self) -> None:
         """
         Resolve multiple chronological rollovers without storing all records.
         """
@@ -662,7 +662,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual([frame.seconds for frame in frames],
                          [int(item.timestamp()) for item in expected])
 
-    def test_skipped_record_header_contributes_to_rollover(self):
+    def test_skipped_record_header_contributes_to_rollover(self) -> None:
         """
         Use skipped non-SIP record headers when calculating chronology.
         """
@@ -685,7 +685,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(len(frames), 1)
         self.assertEqual(frames[0].seconds, int(expected.timestamp()))
 
-    def test_dst_fallback_uses_second_fold_when_time_moves_back(self):
+    def test_dst_fallback_uses_second_fold_when_time_moves_back(self) -> None:
         """
         Resolve repeated DST hour before treating the record as year rollover.
         """

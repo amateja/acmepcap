@@ -1,6 +1,7 @@
 import argparse
 import dataclasses
 import datetime
+import functools
 import gzip
 import ipaddress
 import os.path
@@ -89,6 +90,8 @@ SIPMSG_WORD_PAYLOAD = re.compile(rb'^\w')
 ACCEPTED = 0
 NON_SIP = 1
 OVERSIZED = 2
+# types
+OutputFile = typing.Union[typing.BinaryIO, gzip.GzipFile]
 
 
 def configure() -> argparse.Namespace:
@@ -185,24 +188,29 @@ class PacketCapture:
 
     The writer opens the output path on context entry and closes it on exit.
     """
-    __slots__ = ('path', 'compressed', 'output')
+    __slots__ = ('path', 'compressed', '_output')
 
     def __init__(self, path: pathlib.Path, compressed: bool) -> None:
         self.path = path
         self.compressed = compressed
-        self.output = None
+        self._output: typing.Optional[OutputFile] = None
 
     def __enter__(self) -> 'PacketCapture':
         if self.compressed:
-            self.output = gzip.open(self.path, 'wb')
+            self._output = gzip.open(self.path, 'wb')
         else:
-            self.output = self.path.open('wb')
+            self._output = self.path.open('wb')
         self._write_file_header()
         return self
 
     def __exit__(self, *args: typing.Any) -> None:
-        if self.output is not None:
-            self.output.close()
+        self.output.close()
+
+    @property
+    def output(self) -> OutputFile:
+        if self._output is None:
+            raise RuntimeError('Packet Capture not opened')
+        return self._output
 
     def _write_file_header(self) -> None:
         """
@@ -238,8 +246,7 @@ class Frame:
     """
     __slots__ = ('seconds', 'microseconds', 'packet')
 
-    def __init__(self, seconds: int, microseconds: int,
-                 packet: typing.Union['IPv4', 'IPv6']) -> None:
+    def __init__(self, seconds: int, microseconds: int, packet: 'IP') -> None:
         if packet.length > SNAP_LEN:
             raise ValueError('packet length exceeds PCAP snap length')
         self.seconds = seconds
@@ -462,7 +469,7 @@ class SipTimestampResolver:
     def __init__(self, timezone: datetime.tzinfo, start_year: int) -> None:
         self.timezone = timezone
         self.start_year = self.current_year = start_year
-        self.previous_utc = None
+        self.previous_utc: typing.Optional[datetime.datetime] = None
 
     def _fold_candidates(
             self, header: SipMsgRecordHeader
@@ -470,20 +477,21 @@ class SipTimestampResolver:
         """
         Yield fold=0, and fold=1 only when timezone rules make it distinct.
         """
-        kwargs = {
-            'year': self.current_year,
-            'month': header.month,
-            'day': header.day,
-            'hour': header.hour,
-            'minute': header.minute,
-            'second': header.second,
-            'microsecond': header.microsecond,
-            'tzinfo': self.timezone
-        }
-        timestamp = datetime.datetime(fold=0, **kwargs)
+        timestamp_factory = functools.partial(
+            datetime.datetime,
+            year=self.current_year,
+            month=header.month,
+            day=header.day,
+            hour=header.hour,
+            minute=header.minute,
+            second=header.second,
+            microsecond=header.microsecond,
+            tzinfo=self.timezone
+        )
+        timestamp = timestamp_factory(fold=0)
         yield timestamp
 
-        folded = datetime.datetime(fold=1, **kwargs)
+        folded = timestamp_factory(fold=1)
         if folded.utcoffset() != timestamp.utcoffset():
             yield folded
 
@@ -517,7 +525,7 @@ class SipMsgRecordState:
     __slots__ = ('header', 'timestamp', 'payload', 'payload_size',
                  'max_payload_size', 'is_skipped')
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.header: typing.Optional[SipMsgRecordHeader] = None
         self.timestamp: typing.Optional[datetime.datetime] = None
         self.payload: typing.Optional[typing.List[bytes]] = None

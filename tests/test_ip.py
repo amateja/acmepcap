@@ -6,7 +6,7 @@ from acmepcap import IPv4, IPv6, MAX_IPV4_UDP_PAYLOAD, TTL, UDP
 
 
 class IPv4Test(TestCase):
-    def test_compose(self):
+    def test_compose(self) -> None:
         source_port = 1001
         destination_port = 1002
         udp = UDP(source_port, destination_port, b'')
@@ -48,7 +48,7 @@ class IPv4Test(TestCase):
         # Checksum
         self.assertEqual(int_(raw[26:28]), 0x74b7)
 
-    def test_rejects_total_length_overflow(self):
+    def test_rejects_total_length_overflow(self) -> None:
         """
         Reject IPv4 packets that cannot fit into Total Length.
         """
@@ -59,7 +59,7 @@ class IPv4Test(TestCase):
 
 
 class IPv6Test(TestCase):
-    def test_compose(self):
+    def test_compose(self) -> None:
         source_port = 1001
         destination_port = 1002
         udp = UDP(source_port, destination_port, b'')
