@@ -69,23 +69,23 @@ class IPv6Test(TestCase):
         length = 8
         raw = bytes(ip)
         # Version|Traffic Class|Flow Label
-        self.assertEqual(int.from_bytes(raw[0:4]), 6 << 28)
+        self.assertEqual(int.from_bytes(raw[0:4], 'big'), 6 << 28)
         # Payload Length
-        self.assertEqual(int.from_bytes(raw[4:6]), length)
+        self.assertEqual(int.from_bytes(raw[4:6], 'big'), length)
         # Next Header
         self.assertEqual(raw[6], UDP.number)
         # Hop Limit
         self.assertEqual(raw[7], TTL)
         # Source Address
-        self.assertEqual(int.from_bytes(raw[8:24]), source_ip)
+        self.assertEqual(int.from_bytes(raw[8:24], 'big'), source_ip)
         # Destination Address
-        self.assertEqual(int.from_bytes(raw[24:40]), destination_ip)
+        self.assertEqual(int.from_bytes(raw[24:40], 'big'), destination_ip)
         # UDP part
         # Source Port
-        self.assertEqual(int.from_bytes(raw[40:42]), udp.source)
+        self.assertEqual(int.from_bytes(raw[40:42], 'big'), udp.source)
         # Destination Port
-        self.assertEqual(int.from_bytes(raw[42:44]), udp.destination)
+        self.assertEqual(int.from_bytes(raw[42:44], 'big'), udp.destination)
         # Length
-        self.assertEqual(int.from_bytes(raw[44:46]), 8)
+        self.assertEqual(int.from_bytes(raw[44:46], 'big'), 8)
         # Checksum
-        self.assertEqual(int.from_bytes(raw[46:48]), 0x9c96)
+        self.assertEqual(int.from_bytes(raw[46:48], 'big'), 0x9c96)

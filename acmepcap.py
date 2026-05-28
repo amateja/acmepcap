@@ -403,6 +403,8 @@ class IPv6(IP):
     max_udp_payload = MAX_IPV6_UDP_PAYLOAD
 
     def __bytes__(self) -> bytes:
+        source = self.source.to_bytes(16, 'big')
+        destination = self.destination.to_bytes(16, 'big')
         # Assume Traffic Class = 0 (bits 4-11), Flow Label = 0 (12-31),
         packet = (
             struct.pack(
@@ -412,8 +414,8 @@ class IPv6(IP):
                 UDP.number,                 # Next Header
                 TTL,                        # Hop Limit
             ),
-            self.source.to_bytes(16),       # Source Address
-            self.destination.to_bytes(16),  # Destination Address
+            source,                         # Source Address
+            destination,                    # Destination Address
             bytes(self.transport)
         )
         return b''.join(packet)
