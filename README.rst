@@ -41,7 +41,7 @@ Command-line help:
 
     acmepcap --help
 
-    usage: main.py [-h] -f FILE [-c] -o OUTPUT [-t TIMEZONE]
+    usage: acmepcap [-h] -f FILE [-c] -o OUTPUT [-t TIMEZONE] [--summary]
 
 options:
 
@@ -67,6 +67,14 @@ All parameters in use:
 ::
 
     acmepcap -f sipmsg.log -o my.pcap.gz -c -t Europe/Warsaw --summary
+
+Sensitive data warning
+======================
+
+``sipmsg.log`` files and generated PCAP files may expose phone numbers, SIP
+URIs, IP addresses, authentication-related values, call metadata, and network
+topology. They may also contain personal, customer, or regulated data. Treat
+both input logs and converted captures as confidential support artifacts.
 
 Questions & Answers
 ===================

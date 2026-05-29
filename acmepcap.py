@@ -112,7 +112,7 @@ def configure() -> argparse.Namespace:
     parser.add_argument(
         '-c', '--compress',
         action='store_true',
-        help='compress output packet capture file'
+        help='compress the output packet capture file'
     )
     parser.add_argument(
         '-o', '--output',
