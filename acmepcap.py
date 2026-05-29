@@ -761,6 +761,8 @@ class SipMsgLogFile:
                 last_timestamp = last_timestamp.replace(
                     year=timestamp_year - years)
             except ValueError:
+                # Some dates, such as Feb 29, cannot be represented in every
+                # shifted year. Keep stepping back until the date is valid.
                 pass
         return reference.year - years
 
