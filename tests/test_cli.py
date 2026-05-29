@@ -187,7 +187,8 @@ class TestMain(unittest.TestCase):
     def test_with_payload(self) -> None:
         settings = self.configure(
             False,
-            b'Jun 21 12:13:14.567 On [0:0]1.1.1.1:5060 sent to 2.2.2.2:5060\n'
+            b'Jun 21 12:13:14.567 On [0:0]192.0.2.1:5060 '
+            b'sent to 192.0.2.2:5060\n'
             b'spam\n'
             b'----------------------------------------\n'
         )
@@ -210,8 +211,8 @@ class TestMain(unittest.TestCase):
     def test_summary_is_written_when_enabled(self) -> None:
         settings = self.configure(
             False,
-            b'Jun 21 12:13:14.567 On [0:0]1.1.1.1:5060 '
-            b'sent to 2.2.2.2:5060\n'
+            b'Jun 21 12:13:14.567 On [0:0]192.0.2.1:5060 '
+            b'sent to 192.0.2.2:5060\n'
             b' spam\n'
             b'----------------------------------------\n',
             True
@@ -240,7 +241,8 @@ class TestMain(unittest.TestCase):
         payload = 'x' * (acmepcap.MAX_IPV4_UDP_PAYLOAD - 1)
         settings = self.configure(
             False,
-            'Jun 21 12:13:14.567 On [0:0]1.1.1.1:5060 sent to 2.2.2.2:5060\n'
+            'Jun 21 12:13:14.567 On [0:0]192.0.2.1:5060 '
+            'sent to 192.0.2.2:5060\n'
             f'{payload}\r\n'
             f'----------------------------------------\n'.encode(),
             True

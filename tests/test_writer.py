@@ -76,8 +76,8 @@ class TestPacketCapture(unittest.TestCase):
         source_port = 5060
         destination_port = 5060
         udp = UDP(source_port, destination_port, b'')
-        source_ip = int(ipaddress.IPv4Address('192.168.0.1'))
-        destination_ip = int(ipaddress.IPv4Address('192.168.0.2'))
+        source_ip = int(ipaddress.IPv4Address('192.0.2.1'))
+        destination_ip = int(ipaddress.IPv4Address('192.0.2.2'))
         ip = IPv4(source_ip, destination_ip, udp)
         frame = Frame(seconds, microseconds, ip)
         with PacketCapture(self.output_path, False) as pcap:

@@ -35,10 +35,10 @@ class TestUdpChecksum(unittest.TestCase):
         computed one's-complement checksum is zero, it must be transmitted as
         0xffff. This tests that case.
         """
-        src_ip = int(ipaddress.IPv4Address('192.168.0.1'))
-        dst_ip = int(ipaddress.IPv4Address('192.168.0.2'))
+        src_ip = int(ipaddress.IPv4Address('192.0.2.1'))
+        dst_ip = int(ipaddress.IPv4Address('192.0.2.2'))
         src_port = 1
-        dst_port = 32391
+        dst_port = 31703
         payload = b'\x00'
         udp = UDP(src_port, dst_port, payload)
         IPv4(src_ip, dst_ip, udp)

@@ -10,10 +10,10 @@ class IPv4Test(TestCase):
         source_port = 1001
         destination_port = 1002
         udp = UDP(source_port, destination_port, b'')
-        source_ip = int(ipaddress.IPv4Address('192.168.1.1'))
-        destination_ip = int(ipaddress.IPv4Address('192.168.1.2'))
+        source_ip = int(ipaddress.IPv4Address('192.0.2.1'))
+        destination_ip = int(ipaddress.IPv4Address('192.0.2.2'))
         ip = IPv4(source_ip, destination_ip, udp)
-        ip_checksum = 0xf77d
+        ip_checksum = 0xf6cd
         length = 28
         int_ = functools.partial(int.from_bytes, byteorder='big')
         self.assertEqual(ip.checksum, ip_checksum)
@@ -46,7 +46,7 @@ class IPv4Test(TestCase):
         # Length
         self.assertEqual(int_(raw[24:26]), 8)
         # Checksum
-        self.assertEqual(int_(raw[26:28]), 0x74b7)
+        self.assertEqual(int_(raw[26:28]), 0x7407)
 
     def test_rejects_total_length_overflow(self) -> None:
         """
