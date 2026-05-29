@@ -98,6 +98,23 @@ class TestFileArguments(unittest.TestCase):
         with self.assertRaises(argparse.ArgumentTypeError):
             acmepcap.output_path(str(self.root))
 
+    def test_output_path_rejects_symlink_to_file(self) -> None:
+        target = self.root / 'target.pcap'
+        target.write_bytes(b'')
+        path = self.root / 'output.pcap'
+        path.symlink_to(target)
+
+        with self.assertRaises(argparse.ArgumentTypeError):
+            acmepcap.output_path(str(path))
+
+    def test_output_path_rejects_dangling_symlink(self) -> None:
+        target = self.root / 'missing.pcap'
+        path = self.root / 'output.pcap'
+        path.symlink_to(target)
+
+        with self.assertRaises(argparse.ArgumentTypeError):
+            acmepcap.output_path(str(path))
+
     def test_output_path_rejects_unwritable_file(self) -> None:
         path = self.root / 'output.pcap'
         path.write_bytes(b'')

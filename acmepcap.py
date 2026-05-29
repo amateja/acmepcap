@@ -155,10 +155,16 @@ def input_path(string: str) -> pathlib.Path:
 
 def output_path(string: str) -> pathlib.Path:
     """
-    Validate a writable output path and return its absolute path.
+    Validate a writable non-symlink output path and return its absolute path.
+
+    Output symlinks are rejected so conversion cannot overwrite or truncate a
+    different file than the path provided on the command line.
     """
     path = pathlib.Path(string).absolute()
 
+    if path.is_symlink():
+        raise argparse.ArgumentTypeError(
+            f'output path {path} is a symbolic link')
     if path.exists():
         if not path.is_file():
             raise argparse.ArgumentTypeError(
