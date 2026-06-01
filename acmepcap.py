@@ -14,6 +14,8 @@ import sys
 import typing
 import zoneinfo
 
+from typing_extensions import Self
+
 __version__ = '0.3.0'
 __all__ = [
     'ENDIANNESS',
@@ -203,7 +205,7 @@ class PacketCapture:
         self.compressed = compressed
         self._output: OutputFile | None = None
 
-    def __enter__(self) -> PacketCapture:
+    def __enter__(self) -> Self:
         if self.compressed:
             self._output = gzip.open(self.path, 'wb')
         else:
