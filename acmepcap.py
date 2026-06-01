@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import dataclasses
 import datetime
 import functools
@@ -757,13 +758,11 @@ class SipMsgLogFile:
         timestamp_year = last_timestamp.year
         while last_timestamp > reference:
             years += 1
-            try:
+            # Some dates, such as Feb 29, cannot be represented in every
+            # shifted year. Keep stepping back until the date is valid.
+            with contextlib.suppress(ValueError):
                 last_timestamp = last_timestamp.replace(
                     year=timestamp_year - years)
-            except ValueError:
-                # Some dates, such as Feb 29, cannot be represented in every
-                # shifted year. Keep stepping back until the date is valid.
-                pass
         return reference.year - years
 
     def summary(self) -> str:
