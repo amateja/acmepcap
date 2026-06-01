@@ -722,7 +722,7 @@ class SipMsgLogFile:
         Archived files may store mtime with whole-second precision while
         sipmsg.log entries use milliseconds, so one second is enough tolerance.
         """
-        m_timestamp = os.path.getmtime(self.path)
+        m_timestamp = self.path.stat().st_mtime
         if int(m_timestamp) == m_timestamp:
             m_timestamp += 1
         return datetime.datetime.fromtimestamp(m_timestamp, self.timezone)

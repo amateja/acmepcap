@@ -1,8 +1,10 @@
+from __future__ import annotations
 import datetime
 import ipaddress
 import pathlib
 import tempfile
 import time
+import types
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +12,11 @@ from acmepcap import MAX_IPV4_UDP_PAYLOAD, MAX_IPV6_UDP_PAYLOAD, \
     SipMsgLogFile
 
 UTC = datetime.timezone.utc
+
+
+def stats(date: datetime.datetime | None = None) -> types.SimpleNamespace:
+    timestamp = date.timestamp() if date else time.time()
+    return types.SimpleNamespace(st_mtime=timestamp)
 
 
 class ReaderTest(unittest.TestCase):
@@ -28,7 +35,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             self.assertEqual(list(sip_msg), [])
 
     def test_read_outgoing(self) -> None:
@@ -43,7 +50,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -68,7 +75,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -91,7 +98,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frame, = list(sip_msg)
 
         packet = frame.packet
@@ -119,7 +126,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frame, = list(sip_msg)
 
         packet = frame.packet
@@ -147,7 +154,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frame, = list(sip_msg)
 
         packet = frame.packet
@@ -175,7 +182,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frame, = list(sip_msg)
 
         packet = frame.packet
@@ -199,7 +206,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frame, = list(sip_msg)
 
         self.assertEqual(len(frame.packet.transport.data),
@@ -220,7 +227,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             list(sip_msg)
 
         self.assertEqual(sip_msg.converted, 0)
@@ -241,7 +248,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             list(sip_msg)
 
         self.assertEqual(sip_msg.converted, 0)
@@ -260,7 +267,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frame, = list(sip_msg)
 
         self.assertEqual(len(frame.packet.transport.data),
@@ -281,7 +288,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             list(sip_msg)
 
         self.assertEqual(sip_msg.converted, 0)
@@ -301,7 +308,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -317,9 +324,9 @@ class ReaderTest(unittest.TestCase):
             b'spam\n----------------------------------------\n'
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
+        mtime = datetime.datetime.now(tz=UTC) - datetime.timedelta(hours=1)
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=int(time.time()) - 3600):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -340,8 +347,7 @@ class ReaderTest(unittest.TestCase):
         mtime = expected.replace(microsecond=0) + datetime.timedelta(seconds=1)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -360,7 +366,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -377,7 +383,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             self.assertEqual(list(sip_msg), [])
 
         self.assertEqual(sip_msg.converted, 0)
@@ -402,8 +408,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -424,8 +429,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -448,8 +452,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -472,8 +475,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -494,8 +496,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2025, 3, 1, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         expected = datetime.datetime(2025, 3, 1, 15, 40, 34, 54000, tzinfo=UTC)
@@ -517,8 +518,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 1)
@@ -536,8 +536,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2028, 2, 28, 0, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         expected = datetime.datetime(2024, 2, 29, 23, 59, 59, 999000, UTC)
@@ -555,7 +554,7 @@ class ReaderTest(unittest.TestCase):
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats()):
             frames = list(sip_msg)
 
         self.assertEqual(len(frames), 0)
@@ -576,8 +575,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2025, 1, 1, 0, 1, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         expected_first = datetime.datetime(2024, 12, 31, 23, 59, 59,
@@ -605,8 +603,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2025, 1, 1, 0, 1, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         expected_first = datetime.datetime(
@@ -647,8 +644,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2026, 3, 8, 17, 18, 20, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         expected = [
@@ -677,8 +673,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2025, 1, 1, 0, 1, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         expected = datetime.datetime(2024, 1, 1, 0, 0, 1, tzinfo=UTC)
@@ -700,8 +695,7 @@ class ReaderTest(unittest.TestCase):
         mtime = datetime.datetime(2026, 10, 25, 3, 5, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'Europe/Warsaw')
 
-        with patch('acmepcap.os.path.getmtime',
-                   return_value=mtime.timestamp()):
+        with patch('acmepcap.pathlib.Path.stat', return_value=stats(mtime)):
             frames = list(sip_msg)
 
         expected_first = datetime.datetime(

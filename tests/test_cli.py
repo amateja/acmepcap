@@ -4,7 +4,6 @@ import io
 import pathlib
 import sys
 import tempfile
-import time
 import unittest
 from unittest.mock import patch
 
@@ -170,8 +169,7 @@ class TestMain(unittest.TestCase):
 
     def test_with_compression(self) -> None:
         settings = self.configure(True)
-        with patch('acmepcap.configure', return_value=settings), \
-                patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.configure', return_value=settings):
             acmepcap.main()
         self.assertGreater(settings.output.stat().st_size, 0)
         with gzip.open(settings.output, mode='rb') as gzip_file:
@@ -179,8 +177,7 @@ class TestMain(unittest.TestCase):
 
     def test_without_compression(self) -> None:
         settings = self.configure(False)
-        with patch('acmepcap.configure', return_value=settings), \
-                patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.configure', return_value=settings):
             acmepcap.main()
         self.assertEqual(settings.output.stat().st_size, 24)
 
@@ -192,8 +189,7 @@ class TestMain(unittest.TestCase):
             b'spam\n'
             b'----------------------------------------\n'
         )
-        with patch('acmepcap.configure', return_value=settings), \
-                patch('acmepcap.os.path.getmtime', return_value=time.time()):
+        with patch('acmepcap.configure', return_value=settings):
             acmepcap.main()
         self.assertEqual(settings.output.stat().st_size, 73)
 
@@ -202,7 +198,6 @@ class TestMain(unittest.TestCase):
         stderr = io.StringIO()
 
         with patch('acmepcap.configure', return_value=settings), \
-                patch('acmepcap.os.path.getmtime', return_value=time.time()), \
                 patch('sys.stderr', stderr):
             acmepcap.main()
 
@@ -220,7 +215,6 @@ class TestMain(unittest.TestCase):
         stderr = io.StringIO()
 
         with patch('acmepcap.configure', return_value=settings), \
-                patch('acmepcap.os.path.getmtime', return_value=time.time()), \
                 patch('sys.stderr', stderr):
             acmepcap.main()
 
@@ -250,7 +244,6 @@ class TestMain(unittest.TestCase):
         stderr = io.StringIO()
 
         with patch('acmepcap.configure', return_value=settings), \
-                patch('acmepcap.os.path.getmtime', return_value=time.time()), \
                 patch('sys.stderr', stderr):
             acmepcap.main()
 
