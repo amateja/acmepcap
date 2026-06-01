@@ -203,7 +203,7 @@ class PacketCapture:
         self.compressed = compressed
         self._output: OutputFile | None = None
 
-    def __enter__(self) -> 'PacketCapture':
+    def __enter__(self) -> PacketCapture:
         if self.compressed:
             self._output = gzip.open(self.path, 'wb')
         else:
@@ -238,7 +238,7 @@ class PacketCapture:
         )
         self.output.write(data)
 
-    def write(self, frame: 'Frame') -> None:
+    def write(self, frame: Frame) -> None:
         """
         Write one Packet Capture frame.
 
@@ -254,7 +254,7 @@ class Frame:
     """
     __slots__ = ('seconds', 'microseconds', 'packet')
 
-    def __init__(self, seconds: int, microseconds: int, packet: 'IP') -> None:
+    def __init__(self, seconds: int, microseconds: int, packet: IP) -> None:
         if packet.length > SNAP_LEN:
             raise ValueError('packet length exceeds PCAP snap length')
         self.seconds = seconds
@@ -591,7 +591,7 @@ class SipMsgRecordState:
     def payload_bytes(self) -> bytes:
         return b''.join(self.payload or [])
 
-    def to_record(self) -> 'SipMsgRecord | None':
+    def to_record(self) -> SipMsgRecord | None:
         if self.header is None or self.timestamp is None or \
                 self.payload is None or self.is_skipped:
             return None
