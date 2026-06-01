@@ -1,3 +1,4 @@
+from __future__ import annotations
 import argparse
 import contextlib
 import dataclasses
@@ -200,7 +201,7 @@ class PacketCapture:
     def __init__(self, path: pathlib.Path, compressed: bool) -> None:
         self.path = path
         self.compressed = compressed
-        self._output: typing.Optional[OutputFile] = None
+        self._output: OutputFile | None = None
 
     def __enter__(self) -> 'PacketCapture':
         if self.compressed:
@@ -476,7 +477,7 @@ class SipTimestampResolver:
     def __init__(self, timezone: datetime.tzinfo, start_year: int) -> None:
         self.timezone = timezone
         self.start_year = self.current_year = start_year
-        self.previous_utc: typing.Optional[datetime.datetime] = None
+        self.previous_utc: datetime.datetime | None = None
 
     def _fold_candidates(
             self, header: SipMsgRecordHeader
@@ -533,9 +534,9 @@ class SipMsgRecordState:
                  'max_payload_size', 'is_skipped')
 
     def __init__(self) -> None:
-        self.header: typing.Optional[SipMsgRecordHeader] = None
-        self.timestamp: typing.Optional[datetime.datetime] = None
-        self.payload: typing.Optional[list[bytes]] = None
+        self.header: SipMsgRecordHeader | None = None
+        self.timestamp: datetime.datetime | None = None
+        self.payload: list[bytes] | None = None
         self.payload_size: int = 0
         self.max_payload_size: int = 0
         self.is_skipped: bool = False
@@ -545,7 +546,7 @@ class SipMsgRecordState:
         return self.header is not None
 
     def start(self, header: SipMsgRecordHeader,
-              timestamp: typing.Optional[datetime.datetime],
+              timestamp: datetime.datetime | None,
               max_payload_size: int) -> None:
         self.header = header
         self.timestamp = timestamp
@@ -590,7 +591,7 @@ class SipMsgRecordState:
     def payload_bytes(self) -> bytes:
         return b''.join(self.payload or [])
 
-    def to_record(self) -> typing.Optional['SipMsgRecord']:
+    def to_record(self) -> 'SipMsgRecord | None':
         if self.header is None or self.timestamp is None or \
                 self.payload is None or self.is_skipped:
             return None
@@ -662,8 +663,7 @@ class SipMsgLogFile:
             raise ValueError('UDP port out of range')
         return value
 
-    def _parse_header(
-            self, line: bytes) -> typing.Optional[SipMsgRecordHeader]:
+    def _parse_header(self, line: bytes) -> SipMsgRecordHeader | None:
         """
         Parse one sipmsg.log header line.
 
@@ -727,7 +727,7 @@ class SipMsgLogFile:
             m_timestamp += 1
         return datetime.datetime.fromtimestamp(m_timestamp, self.timezone)
 
-    def _resolve_start_year(self) -> typing.Optional[int]:
+    def _resolve_start_year(self) -> int | None:
         """
         Scan valid headers and resolve the start year for the parsing pass.
 
@@ -797,8 +797,7 @@ class SipMsgLogFile:
             self.skipped_timestamp += 1
         record.start(header, timestamp, header.ip_class.max_udp_payload)
 
-    def _flush_record(
-            self, record: SipMsgRecordState) -> typing.Optional[Frame]:
+    def _flush_record(self, record: SipMsgRecordState) -> Frame | None:
         """
         Convert a delimiter-closed record into a frame when it is complete.
 
