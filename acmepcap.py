@@ -454,7 +454,7 @@ class SipMsgRecordHeader:
     minute: int
     second: int
     microsecond: int
-    ip_class: typing.Type[IP]
+    ip_class: type[IP]
     source_ip: int
     source_port: int
     destination_ip: int
@@ -535,7 +535,7 @@ class SipMsgRecordState:
     def __init__(self) -> None:
         self.header: typing.Optional[SipMsgRecordHeader] = None
         self.timestamp: typing.Optional[datetime.datetime] = None
-        self.payload: typing.Optional[typing.List[bytes]] = None
+        self.payload: typing.Optional[list[bytes]] = None
         self.payload_size: int = 0
         self.max_payload_size: int = 0
         self.is_skipped: bool = False
