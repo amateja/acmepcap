@@ -40,7 +40,7 @@ __all__ = [
 ENDIANNESS = '='  # native
 TTL = 64
 # Maximum value of 16-bit unsigned protocol length fields.
-MAX_UINT16 = 65535
+MAX_UINT16 = 0xFFFF
 # UDP Length includes the UDP header and payload.
 UDP_HEADER_LENGTH = 8
 # This implementation writes IPv4 packets without options.
@@ -323,12 +323,12 @@ class UDP:
 
         total = header + high + low
 
-        while total > 0xffff:
-            total = (total & 0xffff) + (total >> 16)
+        while total > MAX_UINT16:
+            total = (total & MAX_UINT16) + (total >> 16)
 
-        checksum_ = ~total & 0xffff
+        checksum_ = ~total & MAX_UINT16
         if checksum_ == 0:
-            checksum_ = 0xffff
+            checksum_ = MAX_UINT16
         return checksum_
 
     def __bytes__(self) -> bytes:
@@ -347,6 +347,7 @@ class IP:
     """
     __slots__ = ('source', 'destination', 'transport', 'length')
 
+    version = 0
     offset = 0
     max_length = 0
     max_udp_payload = 0
@@ -367,6 +368,7 @@ class IPv4(IP):
     """
     Internet Protocol version 4 bytes representation based on RFC 760.
     """
+    version = 4
     offset = IPV4_HEADER_LENGTH
     max_length = MAX_UINT16
     max_udp_payload = MAX_IPV4_UDP_PAYLOAD
@@ -396,10 +398,10 @@ class IPv4(IP):
             ]
         )
         # the wrapping
-        while total > 0xffff:
-            total = (total & 0xffff) + (total >> 16)
+        while total > MAX_UINT16:
+            total = (total & MAX_UINT16) + (total >> 16)
 
-        return ~total & 0xffff
+        return ~total & MAX_UINT16
 
     def __bytes__(self) -> bytes:
         return struct.pack(
@@ -421,6 +423,7 @@ class IPv6(IP):
     """
     Internet Protocol version 6 bytes representation based on RFC 2460.
     """
+    version = 6
     offset = IPV6_HEADER_LENGTH
     max_length = SNAP_LEN
     max_udp_payload = MAX_IPV6_UDP_PAYLOAD
@@ -667,7 +670,7 @@ class SipMsgLogFile:
         at the boundary so malformed records can be skipped intentionally.
         """
         value = int(port)
-        if not 0 <= value <= 0xffff:
+        if not 0 <= value <= MAX_UINT16:
             raise ValueError('UDP port out of range')
         return value
 
@@ -695,7 +698,7 @@ class SipMsgLogFile:
 
         if local_ip.version != remote_ip.version:
             return None
-        ip_class = IPv4 if local_ip.version == 4 else IPv6
+        ip_class = IPv4 if local_ip.version == IPv4.version else IPv6
 
         if header['direction'] == b'sent to':
             source_ip = int(local_ip)
