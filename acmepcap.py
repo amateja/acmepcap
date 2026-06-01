@@ -198,7 +198,7 @@ class PacketCapture:
     """
     __slots__ = ('path', 'compressed', '_output')
 
-    def __init__(self, path: pathlib.Path, compressed: bool) -> None:
+    def __init__(self, path: pathlib.Path, *, compressed: bool) -> None:
         self.path = path
         self.compressed = compressed
         self._output: OutputFile | None = None
@@ -892,7 +892,7 @@ def main() -> None:
     """
     settings = configure()
     reader = SipMsgLogFile(settings.file, settings.timezone)
-    with PacketCapture(settings.output, settings.compress) as pcap:
+    with PacketCapture(settings.output, compressed=settings.compress) as pcap:
         for frame in reader:
             pcap.write(frame)
     if settings.summary:

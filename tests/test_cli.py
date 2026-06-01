@@ -153,7 +153,7 @@ class TestMain(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmpdir.cleanup()
 
-    def configure(self, compress: bool, payload: bytes = b'',
+    def configure(self, payload: bytes = b'', *, compress: bool = False,
                   summary: bool = False) -> argparse.Namespace:
         """
         Mock acmepcap.configure with temporary input/output paths.
@@ -168,7 +168,7 @@ class TestMain(unittest.TestCase):
         )
 
     def test_with_compression(self) -> None:
-        settings = self.configure(True)
+        settings = self.configure(compress=True)
         with patch('acmepcap.configure', return_value=settings):
             acmepcap.main()
         self.assertGreater(settings.output.stat().st_size, 0)
@@ -176,14 +176,13 @@ class TestMain(unittest.TestCase):
             self.assertEqual(len(gzip_file.read()), 24)
 
     def test_without_compression(self) -> None:
-        settings = self.configure(False)
+        settings = self.configure()
         with patch('acmepcap.configure', return_value=settings):
             acmepcap.main()
         self.assertEqual(settings.output.stat().st_size, 24)
 
     def test_with_payload(self) -> None:
         settings = self.configure(
-            False,
             b'Jun 21 12:13:14.567 On [0:0]192.0.2.1:5060 '
             b'sent to 192.0.2.2:5060\n'
             b'spam\n'
@@ -194,7 +193,7 @@ class TestMain(unittest.TestCase):
         self.assertEqual(settings.output.stat().st_size, 73)
 
     def test_summary_is_not_written_by_default(self) -> None:
-        settings = self.configure(False)
+        settings = self.configure()
         stderr = io.StringIO()
 
         with patch('acmepcap.configure', return_value=settings), \
@@ -205,12 +204,11 @@ class TestMain(unittest.TestCase):
 
     def test_summary_is_written_when_enabled(self) -> None:
         settings = self.configure(
-            False,
             b'Jun 21 12:13:14.567 On [0:0]192.0.2.1:5060 '
             b'sent to 192.0.2.2:5060\n'
             b' spam\n'
             b'----------------------------------------\n',
-            True
+            summary=True
         )
         stderr = io.StringIO()
 
@@ -234,12 +232,11 @@ class TestMain(unittest.TestCase):
     def test_summary_reports_oversized_records(self) -> None:
         payload = 'x' * (acmepcap.MAX_IPV4_UDP_PAYLOAD - 1)
         settings = self.configure(
-            False,
             'Jun 21 12:13:14.567 On [0:0]192.0.2.1:5060 '
             'sent to 192.0.2.2:5060\n'
             f'{payload}\r\n'
             f'----------------------------------------\n'.encode(),
-            True
+            summary=True
         )
         stderr = io.StringIO()
 

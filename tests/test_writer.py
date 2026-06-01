@@ -38,7 +38,7 @@ class TestPacketCapture(unittest.TestCase):
         """
         Verify Packet Capture file header fields.
         """
-        with PacketCapture(self.output_path, False):
+        with PacketCapture(self.output_path, compressed=False):
             pass
         raw = self.output_path.read_bytes()
         byteorder = get_byteorder()
@@ -62,8 +62,9 @@ class TestPacketCapture(unittest.TestCase):
         """
         Raise when context exit is called before context entry.
         """
+        pcap = PacketCapture(self.output_path, compressed=False)
         with self.assertRaises(RuntimeError):
-            PacketCapture(self.output_path, False).__exit__(None, None, None)
+            pcap.__exit__(None, None, None)
         self.assertFalse(self.output_path.exists())
 
     def test_add_simple_frame(self) -> None:
@@ -80,7 +81,7 @@ class TestPacketCapture(unittest.TestCase):
         destination_ip = int(ipaddress.IPv4Address('192.0.2.2'))
         ip = IPv4(source_ip, destination_ip, udp)
         frame = Frame(seconds, microseconds, ip)
-        with PacketCapture(self.output_path, False) as pcap:
+        with PacketCapture(self.output_path, compressed=False) as pcap:
             pcap.write(frame)
         raw = self.output_path.read_bytes()
         byteorder = get_byteorder()
