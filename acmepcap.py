@@ -16,6 +16,9 @@ import zoneinfo
 
 from typing_extensions import Self
 
+if typing.TYPE_CHECKING:
+    import types
+
 __version__ = '0.3.0'
 __all__ = [
     'ENDIANNESS',
@@ -213,7 +216,10 @@ class PacketCapture:
         self._write_file_header()
         return self
 
-    def __exit__(self, *args: typing.Any) -> None:
+    def __exit__(self,
+                 exc_type: type[BaseException] | None,
+                 exc_value: BaseException | None,
+                 traceback: types.TracebackType | None) -> None:
         self.output.close()
 
     @property
