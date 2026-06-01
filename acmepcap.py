@@ -577,9 +577,8 @@ class SipMsgRecordState:
                     return OVERSIZED
                 self.payload = [line]
                 return ACCEPTED
-            else:
-                self.is_skipped = True
-                return NON_SIP
+            self.is_skipped = True
+            return NON_SIP
 
         if self.payload_size > self.max_payload_size:
             self.is_skipped = True

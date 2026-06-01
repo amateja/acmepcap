@@ -21,7 +21,7 @@ def get_byteorder() -> typing.Literal['little', 'big']:
     """
     if ENDIANNESS == '<':
         return 'little'
-    elif ENDIANNESS in ('>', '!'):
+    if ENDIANNESS in ('>', '!'):
         return 'big'
     return sys.byteorder
 
