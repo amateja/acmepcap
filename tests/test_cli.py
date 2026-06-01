@@ -79,9 +79,9 @@ class TestFileArguments(unittest.TestCase):
         path = self.root / 'sipmsg.log'
         path.write_bytes(b'')
 
-        with patch('acmepcap.os.access', return_value=False):
-            with self.assertRaises(argparse.ArgumentTypeError):
-                acmepcap.input_path(str(path))
+        with patch('acmepcap.os.access', return_value=False), \
+                self.assertRaises(argparse.ArgumentTypeError):
+            acmepcap.input_path(str(path))
 
     def test_output_path_accepts_new_file(self) -> None:
         path = self.root / 'output.pcap'
@@ -119,9 +119,9 @@ class TestFileArguments(unittest.TestCase):
         path = self.root / 'output.pcap'
         path.write_bytes(b'')
 
-        with patch('acmepcap.os.access', return_value=False):
-            with self.assertRaises(argparse.ArgumentTypeError):
-                acmepcap.output_path(str(path))
+        with patch('acmepcap.os.access', return_value=False), \
+                self.assertRaises(argparse.ArgumentTypeError):
+            acmepcap.output_path(str(path))
 
     def test_output_path_rejects_missing_parent(self) -> None:
         path = self.root / 'missing' / 'output.pcap'
@@ -140,9 +140,9 @@ class TestFileArguments(unittest.TestCase):
     def test_output_path_rejects_unwritable_parent(self) -> None:
         path = self.root / 'output.pcap'
 
-        with patch('acmepcap.os.access', return_value=False):
-            with self.assertRaises(argparse.ArgumentTypeError):
-                acmepcap.output_path(str(path))
+        with patch('acmepcap.os.access', return_value=False), \
+                self.assertRaises(argparse.ArgumentTypeError):
+            acmepcap.output_path(str(path))
 
 
 class TestMain(unittest.TestCase):
