@@ -38,9 +38,7 @@ class TestArgs(unittest.TestCase):
         self.assertFalse(settings.summary)
 
     def test_parse_args_summary(self) -> None:
-        """
-        Enable conversion summary output.
-        """
+        """Enable conversion summary output."""
         args = [
             'prog', '-f', str(self.input_path), '-o', str(self.output_path),
             '--summary'
@@ -155,9 +153,7 @@ class TestMain(unittest.TestCase):
 
     def configure(self, payload: bytes = b'', *, compress: bool = False,
                   summary: bool = False) -> argparse.Namespace:
-        """
-        Mock acmepcap.configure with temporary input/output paths.
-        """
+        """Mock acmepcap.configure with temporary input/output paths."""
         self.input_path.write_bytes(payload)
         return argparse.Namespace(
             file=self.input_path,

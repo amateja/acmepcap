@@ -143,9 +143,7 @@ def configure() -> argparse.Namespace:
 
 
 def input_path(string: str) -> pathlib.Path:
-    """
-    Validate an existing readable input file and return its absolute path.
-    """
+    """Validate a readable input file and return its absolute path."""
     path = pathlib.Path(string).absolute()
 
     if not path.exists():
@@ -229,9 +227,7 @@ class PacketCapture:
         return self._output
 
     def _write_file_header(self) -> None:
-        """
-        Write the Packet Capture file header.
-        """
+        """Write the Packet Capture file header."""
         # Lower part of Magic Number (0xc3d4) denotes timestamps in
         # microseconds. Value 0x3c4d would denote timestamps in nanoseconds.
         data = struct.pack(
@@ -280,9 +276,7 @@ class Frame:
 
 
 class UDP:
-    """
-    User Datagram Protocol bytes representation based on RFC 768.
-    """
+    """User Datagram Protocol bytes representation based on RFC 768."""
     __slots__ = ('source', 'destination', 'data',
                  'ip_source', 'ip_destination', 'length')
 
@@ -342,9 +336,7 @@ class UDP:
 
 
 class IP:
-    """
-    An abstract class for commons of Internet Protocol version 4 and version 6.
-    """
+    """Share common behavior for IPv4 and IPv6 packets."""
     __slots__ = ('source', 'destination', 'transport', 'length')
 
     version = 0
@@ -365,9 +357,7 @@ class IP:
 
 
 class IPv4(IP):
-    """
-    Internet Protocol version 4 bytes representation based on RFC 760.
-    """
+    """Internet Protocol version 4 bytes representation based on RFC 760."""
     version = 4
     offset = IPV4_HEADER_LENGTH
     max_length = MAX_UINT16
@@ -420,9 +410,7 @@ class IPv4(IP):
 
 
 class IPv6(IP):
-    """
-    Internet Protocol version 6 bytes representation based on RFC 2460.
-    """
+    """Internet Protocol version 6 bytes representation based on RFC 2460."""
     version = 6
     offset = IPV6_HEADER_LENGTH
     max_length = SNAP_LEN
@@ -493,9 +481,7 @@ class SipTimestampResolver:
     def _fold_candidates(
             self, header: SipMsgRecordHeader
     ) -> typing.Iterator[datetime.datetime]:
-        """
-        Yield fold=0, and fold=1 only when timezone rules make it distinct.
-        """
+        """Yield fold candidates when timezone rules make them distinct."""
         timestamp_factory = functools.partial(
             datetime.datetime,
             year=self.current_year,
@@ -616,9 +602,7 @@ class SipMsgRecordState:
 
 @dataclasses.dataclass(frozen=True)
 class SipMsgRecord:
-    """
-    Complete SIP record that can be converted into a PCAP frame.
-    """
+    """Complete SIP record that can be converted into a PCAP frame."""
     __slots__ = ('timestamp', 'header', 'payload')
 
     timestamp: datetime.datetime
@@ -776,9 +760,7 @@ class SipMsgLogFile:
         return reference.year - years
 
     def summary(self) -> str:
-        """
-        Return a human-readable conversion summary for optional CLI output.
-        """
+        """Return the optional CLI conversion summary."""
         skipped = self.skipped_non_sip + self.skipped_malformed + \
             self.skipped_timestamp + self.skipped_empty + \
             self.skipped_incomplete + self.skipped_oversized

@@ -20,9 +20,7 @@ class TestUdpChecksum(unittest.TestCase):
         self.assertEqual(udp.checksum, 0x14de)
 
     def test_udp_checksum_with_no_network(self) -> None:
-        """
-        Unlikely scenario only to make sure that script will not fail.
-        """
+        """Unlikely scenario only to make sure that script will not fail."""
         src_port = 1001
         dst_port = 1002
         payload = b''
@@ -45,9 +43,7 @@ class TestUdpChecksum(unittest.TestCase):
         self.assertEqual(udp.checksum, 0xffff)
 
     def test_rejects_length_overflow(self) -> None:
-        """
-        Reject payloads that cannot fit into the UDP Length field.
-        """
+        """Reject payloads that cannot fit into the UDP Length field."""
         payload = b'x' * (MAX_UINT16 - UDP.offset + 1)
 
         with self.assertRaises(ValueError):

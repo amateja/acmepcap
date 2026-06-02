@@ -49,9 +49,7 @@ class IPv4Test(TestCase):
         self.assertEqual(int_(raw[26:28]), 0x7407)
 
     def test_rejects_total_length_overflow(self) -> None:
-        """
-        Reject IPv4 packets that cannot fit into Total Length.
-        """
+        """Reject IPv4 packets that cannot fit into Total Length."""
         payload = b'x' * (MAX_IPV4_UDP_PAYLOAD + 1)
         udp = UDP(1001, 1002, payload)
         with self.assertRaises(ValueError):

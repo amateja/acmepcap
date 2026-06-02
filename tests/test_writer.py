@@ -35,9 +35,7 @@ class TestPacketCapture(unittest.TestCase):
         self.tmpdir.cleanup()
 
     def test_file_header(self) -> None:
-        """
-        Verify Packet Capture file header fields.
-        """
+        """Verify Packet Capture file header fields."""
         with PacketCapture(self.output_path, compressed=False):
             pass
         raw = self.output_path.read_bytes()
@@ -59,18 +57,14 @@ class TestPacketCapture(unittest.TestCase):
         self.assertEqual(len(raw), 24)
 
     def test_exit_without_enter(self) -> None:
-        """
-        Raise when context exit is called before context entry.
-        """
+        """Raise when context exit is called before context entry."""
         pcap = PacketCapture(self.output_path, compressed=False)
         with self.assertRaises(RuntimeError):
             pcap.__exit__(None, None, None)
         self.assertFalse(self.output_path.exists())
 
     def test_add_simple_frame(self) -> None:
-        """
-        Verify Packet Capture frame fields.
-        """
+        """Verify Packet Capture frame fields."""
         timestamp = time.time()
         seconds = int(timestamp)
         microseconds = int((timestamp - seconds) * 1000000)
@@ -92,9 +86,7 @@ class TestPacketCapture(unittest.TestCase):
         self.assertEqual(len(raw), 68)
 
     def test_rejects_packet_longer_than_snap_len(self) -> None:
-        """
-        Reject frames that cannot fit into the configured PCAP SnapLen.
-        """
+        """Reject frames that cannot fit into the configured PCAP SnapLen."""
         udp = UDP(1001, 1002, b'')
         too_long_packet = IPv4(0, 0, udp)
         too_long_packet.length = SNAP_LEN + 1
