@@ -31,10 +31,12 @@ class TestPacketCapture(unittest.TestCase):
     """Test Packet Capture writer behavior."""
 
     def setUp(self) -> None:
+        """Create a temporary output path."""
         self.tmpdir = tempfile.TemporaryDirectory()
         self.output_path = pathlib.Path(self.tmpdir.name) / 'output.pcap'
 
     def tearDown(self) -> None:
+        """Remove temporary output files."""
         self.tmpdir.cleanup()
 
     def test_file_header(self) -> None:

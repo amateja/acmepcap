@@ -16,12 +16,14 @@ class TestArgs(unittest.TestCase):
     """Test command-line argument parsing."""
 
     def setUp(self) -> None:
+        """Create temporary CLI argument paths."""
         self.tmpdir = tempfile.TemporaryDirectory()
         self.input_path = pathlib.Path(self.tmpdir.name) / 'sipmsg.log'
         self.output_path = pathlib.Path(self.tmpdir.name) / 'output.pcap'
         self.input_path.write_bytes(b'')
 
     def tearDown(self) -> None:
+        """Remove temporary CLI argument paths."""
         self.tmpdir.cleanup()
 
     def test_parse_args_minimal(self) -> None:
@@ -56,29 +58,35 @@ class TestFileArguments(unittest.TestCase):
     """Test input and output path validators."""
 
     def setUp(self) -> None:
+        """Create a temporary root for path validation."""
         self.tmpdir = tempfile.TemporaryDirectory()
         self.root = pathlib.Path(self.tmpdir.name)
 
     def tearDown(self) -> None:
+        """Remove temporary path validation files."""
         self.tmpdir.cleanup()
 
     def test_input_path_accepts_readable_file(self) -> None:
+        """Accept readable input files."""
         path = self.root / 'sipmsg.log'
         path.write_bytes(b'')
 
         self.assertEqual(acmepcap.input_path(str(path)), path.absolute())
 
     def test_input_path_rejects_missing_file(self) -> None:
+        """Reject missing input files."""
         path = self.root / 'missing.log'
 
         with self.assertRaises(argparse.ArgumentTypeError):
             acmepcap.input_path(str(path))
 
     def test_input_path_rejects_directory(self) -> None:
+        """Reject input paths that are directories."""
         with self.assertRaises(argparse.ArgumentTypeError):
             acmepcap.input_path(str(self.root))
 
     def test_input_path_rejects_unreadable_file(self) -> None:
+        """Reject unreadable input files."""
         path = self.root / 'sipmsg.log'
         path.write_bytes(b'')
 
@@ -87,21 +95,25 @@ class TestFileArguments(unittest.TestCase):
             acmepcap.input_path(str(path))
 
     def test_output_path_accepts_new_file(self) -> None:
+        """Accept creatable output files."""
         path = self.root / 'output.pcap'
 
         self.assertEqual(acmepcap.output_path(str(path)), path.absolute())
 
     def test_output_path_accepts_existing_file(self) -> None:
+        """Accept writable existing output files."""
         path = self.root / 'output.pcap'
         path.write_bytes(b'')
 
         self.assertEqual(acmepcap.output_path(str(path)), path.absolute())
 
     def test_output_path_rejects_directory(self) -> None:
+        """Reject output paths that are directories."""
         with self.assertRaises(argparse.ArgumentTypeError):
             acmepcap.output_path(str(self.root))
 
     def test_output_path_rejects_symlink_to_file(self) -> None:
+        """Reject output paths that are symlinks to files."""
         target = self.root / 'target.pcap'
         target.write_bytes(b'')
         path = self.root / 'output.pcap'
@@ -111,6 +123,7 @@ class TestFileArguments(unittest.TestCase):
             acmepcap.output_path(str(path))
 
     def test_output_path_rejects_dangling_symlink(self) -> None:
+        """Reject output paths that are dangling symlinks."""
         target = self.root / 'missing.pcap'
         path = self.root / 'output.pcap'
         path.symlink_to(target)
@@ -119,6 +132,7 @@ class TestFileArguments(unittest.TestCase):
             acmepcap.output_path(str(path))
 
     def test_output_path_rejects_unwritable_file(self) -> None:
+        """Reject unwritable existing output files."""
         path = self.root / 'output.pcap'
         path.write_bytes(b'')
 
@@ -127,12 +141,14 @@ class TestFileArguments(unittest.TestCase):
             acmepcap.output_path(str(path))
 
     def test_output_path_rejects_missing_parent(self) -> None:
+        """Reject output paths with missing parent directories."""
         path = self.root / 'missing' / 'output.pcap'
 
         with self.assertRaises(argparse.ArgumentTypeError):
             acmepcap.output_path(str(path))
 
     def test_output_path_rejects_parent_that_is_not_directory(self) -> None:
+        """Reject output paths whose parent is not a directory."""
         parent = self.root / 'not-a-directory'
         parent.write_bytes(b'')
         path = parent / 'output.pcap'
@@ -141,6 +157,7 @@ class TestFileArguments(unittest.TestCase):
             acmepcap.output_path(str(path))
 
     def test_output_path_rejects_unwritable_parent(self) -> None:
+        """Reject output paths with unwritable parent directories."""
         path = self.root / 'output.pcap'
 
         with patch('acmepcap.os.access', return_value=False), \
@@ -152,11 +169,13 @@ class TestMain(unittest.TestCase):
     """Test main conversion flow behavior."""
 
     def setUp(self) -> None:
+        """Create temporary input and output paths."""
         self.tmpdir = tempfile.TemporaryDirectory()
         self.input_path = pathlib.Path(self.tmpdir.name) / 'sipmsg.log'
         self.output_path = pathlib.Path(self.tmpdir.name) / 'output.pcap'
 
     def tearDown(self) -> None:
+        """Remove temporary conversion files."""
         self.tmpdir.cleanup()
 
     def configure(self, payload: bytes = b'', *, compress: bool = False,
@@ -172,6 +191,7 @@ class TestMain(unittest.TestCase):
         )
 
     def test_with_compression(self) -> None:
+        """Write compressed PCAP output."""
         settings = self.configure(compress=True)
         with patch('acmepcap.configure', return_value=settings):
             acmepcap.main()
@@ -180,12 +200,14 @@ class TestMain(unittest.TestCase):
             self.assertEqual(len(gzip_file.read()), 24)
 
     def test_without_compression(self) -> None:
+        """Write uncompressed PCAP output."""
         settings = self.configure()
         with patch('acmepcap.configure', return_value=settings):
             acmepcap.main()
         self.assertEqual(settings.output.stat().st_size, 24)
 
     def test_with_payload(self) -> None:
+        """Write a PCAP frame for one SIP payload."""
         settings = self.configure(
             b'Jun 21 12:13:14.567 On [0:0]192.0.2.1:5060 '
             b'sent to 192.0.2.2:5060\n'
@@ -197,6 +219,7 @@ class TestMain(unittest.TestCase):
         self.assertEqual(settings.output.stat().st_size, 73)
 
     def test_summary_is_not_written_by_default(self) -> None:
+        """Keep summary output disabled by default."""
         settings = self.configure()
         stderr = io.StringIO()
 
@@ -207,6 +230,7 @@ class TestMain(unittest.TestCase):
         self.assertEqual(stderr.getvalue(), '')
 
     def test_summary_is_written_when_enabled(self) -> None:
+        """Write summary output when requested."""
         settings = self.configure(
             b'Jun 21 12:13:14.567 On [0:0]192.0.2.1:5060 '
             b'sent to 192.0.2.2:5060\n'
@@ -234,6 +258,7 @@ class TestMain(unittest.TestCase):
         )
 
     def test_summary_reports_oversized_records(self) -> None:
+        """Report oversized records in summary output."""
         payload = 'x' * (acmepcap.MAX_IPV4_UDP_PAYLOAD - 1)
         settings = self.configure(
             'Jun 21 12:13:14.567 On [0:0]192.0.2.1:5060 '

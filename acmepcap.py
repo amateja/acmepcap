@@ -223,6 +223,7 @@ class PacketCapture:
 
     @property
     def output(self) -> OutputFile:
+        """Return the opened output file."""
         if self._output is None:
             raise RuntimeError('Packet Capture not opened')
         return self._output

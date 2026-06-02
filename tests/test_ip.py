@@ -11,6 +11,7 @@ class IPv4Test(TestCase):
     """Test IPv4 packet serialization."""
 
     def test_compose(self) -> None:
+        """Serialize an IPv4 packet with UDP payload."""
         source_port = 1001
         destination_port = 1002
         udp = UDP(source_port, destination_port, b'')
@@ -64,6 +65,7 @@ class IPv6Test(TestCase):
     """Test IPv6 packet serialization."""
 
     def test_compose(self) -> None:
+        """Serialize an IPv6 packet with UDP payload."""
         source_port = 1001
         destination_port = 1002
         udp = UDP(source_port, destination_port, b'')

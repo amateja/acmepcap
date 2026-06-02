@@ -26,10 +26,12 @@ class ReaderTest(unittest.TestCase):
     """Test sipmsg.log reader behavior."""
 
     def setUp(self) -> None:
+        """Create a temporary sipmsg.log path."""
         self.tmpdir = tempfile.TemporaryDirectory()
         self.sipmsg_path = pathlib.Path(self.tmpdir.name) / 'sipmsg.log'
 
     def tearDown(self) -> None:
+        """Remove temporary sipmsg.log files."""
         self.tmpdir.cleanup()
 
     def test_read_empty(self) -> None:
