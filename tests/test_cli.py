@@ -13,6 +13,8 @@ import acmepcap
 
 
 class TestArgs(unittest.TestCase):
+    """Test command-line argument parsing."""
+
     def setUp(self) -> None:
         self.tmpdir = tempfile.TemporaryDirectory()
         self.input_path = pathlib.Path(self.tmpdir.name) / 'sipmsg.log'
@@ -51,6 +53,8 @@ class TestArgs(unittest.TestCase):
 
 
 class TestFileArguments(unittest.TestCase):
+    """Test input and output path validators."""
+
     def setUp(self) -> None:
         self.tmpdir = tempfile.TemporaryDirectory()
         self.root = pathlib.Path(self.tmpdir.name)
@@ -145,6 +149,8 @@ class TestFileArguments(unittest.TestCase):
 
 
 class TestMain(unittest.TestCase):
+    """Test main conversion flow behavior."""
+
     def setUp(self) -> None:
         self.tmpdir = tempfile.TemporaryDirectory()
         self.input_path = pathlib.Path(self.tmpdir.name) / 'sipmsg.log'

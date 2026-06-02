@@ -8,6 +8,8 @@ from acmepcap import IPv4, IPv6, MAX_IPV4_UDP_PAYLOAD, TTL, UDP
 
 
 class IPv4Test(TestCase):
+    """Test IPv4 packet serialization."""
+
     def test_compose(self) -> None:
         source_port = 1001
         destination_port = 1002
@@ -59,6 +61,8 @@ class IPv4Test(TestCase):
 
 
 class IPv6Test(TestCase):
+    """Test IPv6 packet serialization."""
+
     def test_compose(self) -> None:
         source_port = 1001
         destination_port = 1002

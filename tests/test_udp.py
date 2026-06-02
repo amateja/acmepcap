@@ -7,6 +7,8 @@ from acmepcap import IPv4, MAX_UINT16, UDP
 
 
 class TestUdpChecksum(unittest.TestCase):
+    """Test UDP checksum behavior."""
+
     def test_udp_checksum(self) -> None:
         """Validate a published UDP checksum example.
 

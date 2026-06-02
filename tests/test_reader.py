@@ -23,6 +23,8 @@ def stats(date: datetime.datetime | None = None) -> types.SimpleNamespace:
 
 
 class ReaderTest(unittest.TestCase):
+    """Test sipmsg.log reader behavior."""
+
     def setUp(self) -> None:
         self.tmpdir = tempfile.TemporaryDirectory()
         self.sipmsg_path = pathlib.Path(self.tmpdir.name) / 'sipmsg.log'

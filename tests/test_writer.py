@@ -28,6 +28,8 @@ def get_byteorder() -> typing.Literal['little', 'big']:
 
 
 class TestPacketCapture(unittest.TestCase):
+    """Test Packet Capture writer behavior."""
+
     def setUp(self) -> None:
         self.tmpdir = tempfile.TemporaryDirectory()
         self.output_path = pathlib.Path(self.tmpdir.name) / 'output.pcap'
