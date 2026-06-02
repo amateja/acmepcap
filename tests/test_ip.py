@@ -1,3 +1,5 @@
+"""Test IPv4 and IPv6 packet serialization."""
+
 import functools
 import ipaddress
 from unittest import TestCase

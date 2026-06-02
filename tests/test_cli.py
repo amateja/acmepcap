@@ -1,3 +1,5 @@
+"""Test command-line parsing, path validation, and main conversion flow."""
+
 import argparse
 import gzip
 import io

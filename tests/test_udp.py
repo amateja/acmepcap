@@ -1,3 +1,5 @@
+"""Test UDP serialization and checksum behavior."""
+
 import ipaddress
 import unittest
 

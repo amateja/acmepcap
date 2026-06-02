@@ -1,4 +1,7 @@
+"""Convert Acme Packet sipmsg.log files into packet captures."""
+
 from __future__ import annotations
+
 import argparse
 import contextlib
 import dataclasses

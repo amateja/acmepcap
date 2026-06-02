@@ -1,4 +1,7 @@
+"""Test sipmsg.log parsing, timestamp resolution, and skip policies."""
+
 from __future__ import annotations
+
 import datetime
 import ipaddress
 import pathlib

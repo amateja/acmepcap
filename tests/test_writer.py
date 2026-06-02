@@ -1,3 +1,5 @@
+"""Test Packet Capture writer behavior."""
+
 import ipaddress
 import pathlib
 import sys
