@@ -12,12 +12,12 @@ from acmepcap import ENDIANNESS, Frame, IPv4, LINKTYPE_RAW, PacketCapture, \
 
 def get_byteorder() -> typing.Literal['little', 'big']:
     """
+    Return the byte order used by native-endian PCAP fields.
+
     Packet Capture files may use either big-endian or little-endian headers.
     The implementation uses native endianness by default, so tests need to
     derive the expected byte order from `acmepcap.ENDIANNESS` and the current
     platform.
-
-    :return: endianness string
     """
     if ENDIANNESS == '<':
         return 'little'

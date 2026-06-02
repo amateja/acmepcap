@@ -22,8 +22,9 @@ class TestArgs(unittest.TestCase):
 
     def test_parse_args_minimal(self) -> None:
         """
-        Give only the minimal arguments in and verify if all configuration
-        parameters are returned.
+        Parse minimal CLI arguments.
+
+        Verify that all configuration parameters are returned.
         """
         args = [
             'prog', '-f', str(self.input_path), '-o', str(self.output_path)

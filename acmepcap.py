@@ -194,9 +194,9 @@ def output_path(string: str) -> pathlib.Path:
 
 class PacketCapture:
     """
-    Streaming Packet Capture file writer based on
-    https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/
+    Write Packet Capture files.
 
+    Based on https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/.
     The writer opens the output path on context entry and closes it on exit.
     """
 
@@ -254,8 +254,9 @@ class PacketCapture:
 
 class Frame:
     """
-    Packet Capture Frame bytes representation based on
-    https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/
+    Represent one Packet Capture frame.
+
+    Based on https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/.
     """
 
     __slots__ = ('seconds', 'microseconds', 'packet')
@@ -893,8 +894,9 @@ class SipMsgLogFile:
 
 def main() -> None:
     """
-    Main function of the application. Retrieves user input, manages reading
-    sipmsg.log and writing Packet Capture file.
+    Run the command-line conversion.
+
+    Read settings, convert sipmsg.log records, and write packet capture output.
     """
     settings = configure()
     reader = SipMsgLogFile(settings.file, settings.timezone)

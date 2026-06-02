@@ -353,8 +353,9 @@ class ReaderTest(unittest.TestCase):
 
     def test_read_without_bracketed_context(self) -> None:
         """
-        Parse headers where the optional [network-interface:VLAN] context is
-        absent.
+        Parse headers without network-interface context.
+
+        The optional `[network-interface:VLAN]` field may be absent.
         """
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3].encode()
