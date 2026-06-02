@@ -199,6 +199,7 @@ class PacketCapture:
 
     The writer opens the output path on context entry and closes it on exit.
     """
+
     __slots__ = ('path', 'compressed', '_output')
 
     def __init__(self, path: pathlib.Path, *, compressed: bool) -> None:
@@ -256,6 +257,7 @@ class Frame:
     Packet Capture Frame bytes representation based on
     https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/
     """
+
     __slots__ = ('seconds', 'microseconds', 'packet')
 
     def __init__(self, seconds: int, microseconds: int, packet: IP) -> None:
@@ -277,6 +279,7 @@ class Frame:
 
 class UDP:
     """User Datagram Protocol bytes representation based on RFC 768."""
+
     __slots__ = ('source', 'destination', 'data',
                  'ip_source', 'ip_destination', 'length')
 
@@ -337,6 +340,7 @@ class UDP:
 
 class IP:
     """Share common behavior for IPv4 and IPv6 packets."""
+
     __slots__ = ('source', 'destination', 'transport', 'length')
 
     version = 0
@@ -358,6 +362,7 @@ class IP:
 
 class IPv4(IP):
     """Internet Protocol version 4 bytes representation based on RFC 760."""
+
     version = 4
     offset = IPV4_HEADER_LENGTH
     max_length = MAX_UINT16
@@ -411,6 +416,7 @@ class IPv4(IP):
 
 class IPv6(IP):
     """Internet Protocol version 6 bytes representation based on RFC 2460."""
+
     version = 6
     offset = IPV6_HEADER_LENGTH
     max_length = SNAP_LEN
@@ -443,6 +449,7 @@ class SipMsgRecordHeader:
     The log header itself has no year. The year is resolved later from file
     mtime and chronological order of valid log headers.
     """
+
     __slots__ = ('month', 'day', 'hour', 'minute', 'second', 'microsecond',
                  'ip_class',
                  'source_ip', 'source_port',
@@ -471,6 +478,7 @@ class SipTimestampResolver:
     move backward in UTC; DST fold=1 is used only when it prevents a false
     fall-back rollover.
     """
+
     __slots__ = ('timezone', 'start_year', 'current_year', 'previous_utc')
 
     def __init__(self, timezone: datetime.tzinfo, start_year: int) -> None:
@@ -527,6 +535,7 @@ class SipMsgRecordState:
     current header, resolved timestamp, payload lines, and skip state until a
     delimiter confirms that the record is complete.
     """
+
     __slots__ = ('header', 'timestamp', 'payload', 'payload_size',
                  'max_payload_size', 'is_skipped')
 
@@ -603,6 +612,7 @@ class SipMsgRecordState:
 @dataclasses.dataclass(frozen=True)
 class SipMsgRecord:
     """Complete SIP record that can be converted into a PCAP frame."""
+
     __slots__ = ('timestamp', 'header', 'payload')
 
     timestamp: datetime.datetime
@@ -627,6 +637,7 @@ class SipMsgLogFile:
     chronology. Records not closed by the exact 40-dash delimiter are treated
     as incomplete and skipped.
     """
+
     __slots__ = ('path', 'converted', 'skipped_non_sip', 'skipped_malformed',
                  'skipped_timestamp', 'skipped_empty', 'skipped_incomplete',
                  'skipped_oversized', 'timezone')
