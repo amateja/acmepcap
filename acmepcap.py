@@ -208,6 +208,7 @@ class PacketCapture:
         self._output: OutputFile | None = None
 
     def __enter__(self) -> Self:
+        """Open the output file and write the PCAP file header."""
         if self.compressed:
             self._output = gzip.open(self.path, 'wb')
         else:
@@ -219,6 +220,7 @@ class PacketCapture:
                  exc_type: type[BaseException] | None,
                  exc_value: BaseException | None,
                  traceback: types.TracebackType | None) -> None:
+        """Close the output file."""
         self.output.close()
 
     @property
@@ -268,6 +270,7 @@ class Frame:
         self.packet = packet
 
     def __bytes__(self) -> bytes:
+        """Serialize the frame header and packet bytes."""
         return struct.pack(
             f'{ENDIANNESS}IIII',
             self.seconds,        # Timestamp (Seconds)
@@ -328,6 +331,7 @@ class UDP:
         return checksum_
 
     def __bytes__(self) -> bytes:
+        """Serialize the UDP header and payload."""
         return struct.pack(
             '>HHHH',
             self.source,       # Source Port
@@ -397,6 +401,7 @@ class IPv4(IP):
         return ~total & MAX_UINT16
 
     def __bytes__(self) -> bytes:
+        """Serialize the IPv4 packet header and payload."""
         return struct.pack(
             '>BBHHHBBHII',
             4 << 4 | 5,       # Version|IHL
@@ -421,6 +426,7 @@ class IPv6(IP):
     max_udp_payload = MAX_IPV6_UDP_PAYLOAD
 
     def __bytes__(self) -> bytes:
+        """Serialize the IPv6 packet header and payload."""
         source = self.source.to_bytes(16, 'big')
         destination = self.destination.to_bytes(16, 'big')
         # Assume Traffic Class = 0 (bits 4-11), Flow Label = 0 (12-31),
