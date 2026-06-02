@@ -18,6 +18,7 @@ UTC = datetime.timezone.utc
 
 
 def stats(date: datetime.datetime | None = None) -> types.SimpleNamespace:
+    """Return a mocked stat result with configurable mtime."""
     timestamp = date.timestamp() if date else time.time()
     return types.SimpleNamespace(st_mtime=timestamp)
 
