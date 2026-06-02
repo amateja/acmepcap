@@ -203,6 +203,7 @@ class PacketCapture:
     __slots__ = ('path', 'compressed', '_output')
 
     def __init__(self, path: pathlib.Path, *, compressed: bool) -> None:
+        """Prepare a writer that opens the capture file inside its context."""
         self.path = path
         self.compressed = compressed
         self._output: OutputFile | None = None
@@ -263,6 +264,7 @@ class Frame:
     __slots__ = ('seconds', 'microseconds', 'packet')
 
     def __init__(self, seconds: int, microseconds: int, packet: IP) -> None:
+        """Prepare a PCAP record and reject packets longer than SnapLen."""
         if packet.length > SNAP_LEN:
             raise ValueError('packet length exceeds PCAP snap length')
         self.seconds = seconds
@@ -290,6 +292,7 @@ class UDP:
     offset = UDP_HEADER_LENGTH
 
     def __init__(self, source: int, destination: int, data: bytes) -> None:
+        """Prepare a UDP segment and validate its length."""
         self.source = source & 65535
         self.destination = destination & 65535
         self.data = data
@@ -352,6 +355,7 @@ class IP:
     max_udp_payload = 0
 
     def __init__(self, source: int, destination: int, transport: UDP) -> None:
+        """Attach transport data and validate the IP packet length."""
         self.source = transport.ip_source = source
         self.destination = transport.ip_destination = destination
         self.transport = transport
@@ -484,6 +488,7 @@ class SipTimestampResolver:
     __slots__ = ('timezone', 'start_year', 'current_year', 'previous_utc')
 
     def __init__(self, timezone: datetime.tzinfo, start_year: int) -> None:
+        """Start timestamp resolution in the configured log timezone."""
         self.timezone = timezone
         self.start_year = self.current_year = start_year
         self.previous_utc: datetime.datetime | None = None
@@ -540,6 +545,7 @@ class SipMsgRecordState:
                  'max_payload_size', 'is_skipped')
 
     def __init__(self) -> None:
+        """Initialize an empty record state before the first header."""
         self.header: SipMsgRecordHeader | None = None
         self.timestamp: datetime.datetime | None = None
         self.payload: list[bytes] | None = None
@@ -641,6 +647,7 @@ class SipMsgLogFile:
                  'skipped_oversized', 'timezone')
 
     def __init__(self, path: pathlib.Path, timezone: str) -> None:
+        """Prepare a reader with timezone and fresh counters."""
         self.path = path
         self.converted = 0
         self.skipped_non_sip = 0
