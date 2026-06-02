@@ -44,9 +44,11 @@ class ReaderTest(unittest.TestCase):
         """
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3].encode()
-        buffer = date + b' On [0:0]192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
+        buffer = (
+            date + b' On [0:0]192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -68,10 +70,11 @@ class ReaderTest(unittest.TestCase):
         """
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3].encode()
-        buffer = \
-            date + b' On [0:0]192.0.2.1:5060 received from 192.0.2.2:5060\n' \
-            b'spam\n' \
+        buffer = (
+            date + b' On [0:0]192.0.2.1:5060 received from 192.0.2.2:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -92,9 +95,11 @@ class ReaderTest(unittest.TestCase):
         destination_ip = ipaddress.IPv4Address('192.0.2.2')
         destination_port = 5070
         payload = 'INVITE sip:user@example.com SIP/2.0\r\n'
-        buffer = f'{date} On {source_ip}:{source_port} ' \
-            f'sent to {destination_ip}:{destination_port}\n' \
-            f'{payload}----------------------------------------\n'.encode()
+        buffer = (
+            f'{date} On {source_ip}:{source_port} '
+            f'sent to {destination_ip}:{destination_port}\n'
+            f'{payload}----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -120,9 +125,11 @@ class ReaderTest(unittest.TestCase):
         destination_ip = ipaddress.IPv4Address('192.0.2.1')
         destination_port = 5060
         payload = 'SIP/2.0 200 OK\r\n'
-        buffer = f'{date} On {destination_ip}:{destination_port} ' \
-            f'received from {source_ip}:{source_port}\n' \
-            f'{payload}----------------------------------------\n'.encode()
+        buffer = (
+            f'{date} On {destination_ip}:{destination_port} '
+            f'received from {source_ip}:{source_port}\n'
+            f'{payload}----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -148,9 +155,11 @@ class ReaderTest(unittest.TestCase):
         destination_ip = ipaddress.IPv6Address('2001:db8::2')
         destination_port = 5070
         payload = 'INVITE sip:user@example.com SIP/2.0\r\n'
-        buffer = f'{date} On [0:0][{source_ip}]:{source_port} ' \
-            f'sent to [{destination_ip}]:{destination_port}\n' \
-            f'{payload}----------------------------------------\n'.encode()
+        buffer = (
+            f'{date} On [0:0][{source_ip}]:{source_port} '
+            f'sent to [{destination_ip}]:{destination_port}\n'
+            f'{payload}----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -176,9 +185,11 @@ class ReaderTest(unittest.TestCase):
         destination_ip = ipaddress.IPv6Address('2001:db8::1')
         destination_port = 5060
         payload = 'SIP/2.0 200 OK\r\n'
-        buffer = f'{date} On [0:0][{destination_ip}]:{destination_port} ' \
-            f'received from [{source_ip}]:{source_port}\n' \
-            f'{payload}----------------------------------------\n'.encode()
+        buffer = (
+            f'{date} On [0:0][{destination_ip}]:{destination_port} '
+            f'received from [{source_ip}]:{source_port}\n'
+            f'{payload}----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -200,9 +211,11 @@ class ReaderTest(unittest.TestCase):
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
         payload = 'x' * (MAX_IPV4_UDP_PAYLOAD - 2)
-        buffer = f'{date} On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            f'{payload}\r\n' \
-            '----------------------------------------\n'.encode()
+        buffer = (
+            f'{date} On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            f'{payload}\r\n'
+            '----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -221,9 +234,11 @@ class ReaderTest(unittest.TestCase):
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
         payload = 'x' * (MAX_IPV4_UDP_PAYLOAD - 1)
-        buffer = f'{date} On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            f'{payload}\r\n' \
-            '----------------------------------------\n'.encode()
+        buffer = (
+            f'{date} On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            f'{payload}\r\n'
+            '----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -240,11 +255,12 @@ class ReaderTest(unittest.TestCase):
         first_line = 'INVITE sip:user@example.com SIP/2.0\r\n'
         fill_size = MAX_IPV4_UDP_PAYLOAD - len(first_line) - 1
         second_line = 'x' * fill_size + '\r\n'
-        buffer = \
-            'Sep 10 15:40:33.054 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            f'{first_line}' \
-            f'{second_line}' \
-            '----------------------------------------\n'.encode()
+        buffer = (
+            'Sep 10 15:40:33.054 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            f'{first_line}'
+            f'{second_line}'
+            '----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -261,9 +277,11 @@ class ReaderTest(unittest.TestCase):
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
         payload = 'x' * (MAX_IPV6_UDP_PAYLOAD - 2)
-        buffer = f'{date} On [2001:db8::1]:5060 sent to [2001:db8::2]:5060\n' \
-            f'{payload}\r\n' \
-            '----------------------------------------\n'.encode()
+        buffer = (
+            f'{date} On [2001:db8::1]:5060 sent to [2001:db8::2]:5060\n'
+            f'{payload}\r\n'
+            '----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -282,9 +300,11 @@ class ReaderTest(unittest.TestCase):
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
         payload = 'x' * (MAX_IPV6_UDP_PAYLOAD - 1)
-        buffer = f'{date} On [2001:db8::1]:5060 sent to [2001:db8::2]:5060\n' \
-                 f'{payload}\r\n' \
-                 '----------------------------------------\n'.encode()
+        buffer = (
+            f'{date} On [2001:db8::1]:5060 sent to [2001:db8::2]:5060\n'
+            f'{payload}\r\n'
+            '----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -300,11 +320,15 @@ class ReaderTest(unittest.TestCase):
         """
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3]
-        payload = 'INVITE sip:user@example.com SIP/2.0\r\n' \
-            'Via: SIP/2.0/UDP 192.0.2.1:5060\r\n' \
+        payload = (
+            'INVITE sip:user@example.com SIP/2.0\r\n'
+            'Via: SIP/2.0/UDP 192.0.2.1:5060\r\n'
             'Call-ID: abc\r\n'
-        buffer = f'{date} On [0:0]192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            f'{payload}----------------------------------------\n'.encode()
+        )
+        buffer = (
+            f'{date} On [0:0]192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            f'{payload}----------------------------------------\n'
+        ).encode()
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -320,8 +344,10 @@ class ReaderTest(unittest.TestCase):
         """
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3].encode()
-        buffer = date + b' On [0:0]192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
+        buffer = (
+            date + b' On [0:0]192.0.2.1:5060 sent to 192.0.2.2:5060\n'
             b'spam\n----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
         mtime = datetime.datetime.now(tz=UTC) - datetime.timedelta(hours=1)
@@ -339,10 +365,12 @@ class ReaderTest(unittest.TestCase):
         """
         expected = datetime.datetime(2022, 2, 3, 1, 17, 42, 267000, tzinfo=UTC)
         # Use an explicit date because datetime.strftime('%d') is zero-padded.
-        buffer = b'Feb  3 01:17:42.267 On [0:2829]192.0.2.1:5060 ' \
-            b'sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
+        buffer = (
+            b'Feb  3 01:17:42.267 On [0:2829]192.0.2.1:5060 '
+            b'sent to 192.0.2.2:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = expected.replace(microsecond=0) + datetime.timedelta(seconds=1)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -360,9 +388,10 @@ class ReaderTest(unittest.TestCase):
         """
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3].encode()
-        buffer = \
-            date + b' On 192.0.2.2:8270 sent to 192.0.2.1:5061\n' \
+        buffer = (
+            date + b' On 192.0.2.2:8270 sent to 192.0.2.1:5061\n'
             b'spam\n----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -377,9 +406,11 @@ class ReaderTest(unittest.TestCase):
         """
         now = datetime.datetime.now(tz=UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3].encode()
-        buffer = date + b' On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
-            b'  spam\n' \
+        buffer = (
+            date + b' On 127.0.0.1:2945 sent to 127.0.0.1:2944\n'
+            b'  spam\n'
             b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -397,13 +428,14 @@ class ReaderTest(unittest.TestCase):
         """
         Continue after a malformed record and extract later valid records.
         """
-        buffer = \
-            b'Sep 10 15:40:33.054 On 999.0.0.1:2945 sent to 127.0.0.1:2944\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Sep 10 15:40:34.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
-            b'spam\n' \
+        buffer = (
+            b'Sep 10 15:40:33.054 On 999.0.0.1:2945 sent to 127.0.0.1:2944\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Sep 10 15:40:34.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -418,13 +450,15 @@ class ReaderTest(unittest.TestCase):
         """
         Continue after a header containing an out-of-range UDP port.
         """
-        buffer = b'Sep 10 15:40:33.054 On 127.0.0.1:70000 ' \
-            b'sent to 127.0.0.1:2944\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Sep 10 15:40:34.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
-            b'spam\n' \
+        buffer = (
+            b'Sep 10 15:40:33.054 On 127.0.0.1:70000 '
+            b'sent to 127.0.0.1:2944\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Sep 10 15:40:34.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -439,15 +473,16 @@ class ReaderTest(unittest.TestCase):
         """
         Continue after a malformed bracketed IPv6 header.
         """
-        buffer = \
-            b'Sep 10 15:40:33.054 On [0:0][2001:db8:::1]:5060 ' \
-            b'sent to [2001:db8::2]:5060\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Sep 10 15:40:34.054 On [0:0][2001:db8::1]:5060 ' \
-            b'sent to [2001:db8::2]:5060\n' \
-            b'spam\n' \
+        buffer = (
+            b'Sep 10 15:40:33.054 On [0:0][2001:db8:::1]:5060 '
+            b'sent to [2001:db8::2]:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Sep 10 15:40:34.054 On [0:0][2001:db8::1]:5060 '
+            b'sent to [2001:db8::2]:5060\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -462,15 +497,16 @@ class ReaderTest(unittest.TestCase):
         """
         Continue after a header mixing IPv4 and IPv6 endpoints.
         """
-        buffer = \
-            b'Sep 10 15:40:33.054 On [0:0]192.0.2.1:5060 ' \
-            b'sent to [2001:db8::1]:5060\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Sep 10 15:40:34.054 On [0:0][2001:db8::2]:5060 ' \
-            b'sent to [2001:db8::1]:5060\n' \
-            b'spam\n' \
+        buffer = (
+            b'Sep 10 15:40:33.054 On [0:0]192.0.2.1:5060 '
+            b'sent to [2001:db8::1]:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Sep 10 15:40:34.054 On [0:0][2001:db8::2]:5060 '
+            b'sent to [2001:db8::1]:5060\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -485,13 +521,14 @@ class ReaderTest(unittest.TestCase):
         """
         Continue after a valid-looking header with an impossible date.
         """
-        buffer = \
-            b'Feb 29 15:40:33.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Mar  1 15:40:34.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
-            b'spam\n' \
+        buffer = (
+            b'Feb 29 15:40:33.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Mar  1 15:40:34.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2025, 3, 1, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -508,12 +545,13 @@ class ReaderTest(unittest.TestCase):
         """
         Continue after a header without payload before delimiter.
         """
-        buffer = \
-            b'Sep 10 15:40:33.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
-            b'----------------------------------------\n' \
-            b'Sep 10 15:40:34.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
-            b'spam\n' \
+        buffer = (
+            b'Sep 10 15:40:33.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n'
             b'----------------------------------------\n'
+            b'Sep 10 15:40:34.054 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2025, 9, 10, 16, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -528,10 +566,11 @@ class ReaderTest(unittest.TestCase):
         """
         Continue shifting Feb 29 until the target year is valid.
         """
-        buffer = \
-            b'Feb 29 23:59:59.999 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
-            b'spam\n' \
+        buffer = (
+            b'Feb 29 23:59:59.999 On 127.0.0.1:2945 sent to 127.0.0.1:2944\n'
+            b'spam\n'
             b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2028, 2, 28, 0, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -549,8 +588,10 @@ class ReaderTest(unittest.TestCase):
         """
         now = datetime.datetime.now(UTC)
         date = f'{now:%b %d %H:%M:%S.%f}'[:-3].encode()
-        buffer = date + b' On 127.0.0.1:2945 sent to 127.0.0.1:2944\n' \
+        buffer = (
+            date + b' On 127.0.0.1:2945 sent to 127.0.0.1:2944\n'
             b'spam\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
 
@@ -564,13 +605,14 @@ class ReaderTest(unittest.TestCase):
         """
         Use the last header to resolve December/January rollover.
         """
-        buffer = \
-            b'Dec 31 23:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Jan  1 00:00:01.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
+        buffer = (
+            b'Dec 31 23:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Jan  1 00:00:01.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2025, 1, 1, 0, 1, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -589,16 +631,17 @@ class ReaderTest(unittest.TestCase):
         """
         Use the last header to resolve December/January rollover.
         """
-        buffer = \
-            b'Dec 31 23:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Dec 30 23:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Jan  1 00:00:01.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
+        buffer = (
+            b'Dec 31 23:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Dec 30 23:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+            b'Jan  1 00:00:01.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2025, 1, 1, 0, 1, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -624,22 +667,23 @@ class ReaderTest(unittest.TestCase):
         """
         Resolve multiple chronological rollovers without storing all records.
         """
-        buffer = \
-            b'Jul 31 12:01:02.003 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Jul 31 12:01:02.003 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'ham\n' \
-            b'----------------------------------------\n' \
-            b'Aug  1 10:11:02.003 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'bacon\n' \
-            b'----------------------------------------\n' \
-            b'Jun 10 23:00:40.443 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'and\n' \
-            b'----------------------------------------\n' \
-            b'Mar  8 17:18:19.202 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'eggs\n' \
+        buffer = (
+            b'Jul 31 12:01:02.003 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Jul 31 12:01:02.003 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'ham\n'
+            b'----------------------------------------\n'
+            b'Aug  1 10:11:02.003 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'bacon\n'
+            b'----------------------------------------\n'
+            b'Jun 10 23:00:40.443 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'and\n'
+            b'----------------------------------------\n'
+            b'Mar  8 17:18:19.202 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'eggs\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2026, 3, 8, 17, 18, 20, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -662,13 +706,14 @@ class ReaderTest(unittest.TestCase):
         """
         Use skipped non-SIP record headers when calculating chronology.
         """
-        buffer = \
-            b'Jan  1 00:00:01.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Dec 31 23:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'  spam\n' \
+        buffer = (
+            b'Jan  1 00:00:01.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Dec 31 23:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'  spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2025, 1, 1, 0, 1, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'UTC')
@@ -684,13 +729,14 @@ class ReaderTest(unittest.TestCase):
         """
         Resolve repeated DST hour before treating the record as year rollover.
         """
-        buffer = \
-            b'Oct 25 02:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
-            b'----------------------------------------\n' \
-            b'Oct 25 02:00:00.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n' \
-            b'spam\n' \
+        buffer = (
+            b'Oct 25 02:59:59.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
             b'----------------------------------------\n'
+            b'Oct 25 02:00:00.000 On 192.0.2.1:5060 sent to 192.0.2.2:5060\n'
+            b'spam\n'
+            b'----------------------------------------\n'
+        )
         self.sipmsg_path.write_bytes(buffer)
         mtime = datetime.datetime(2026, 10, 25, 3, 5, tzinfo=UTC)
         sip_msg = SipMsgLogFile(self.sipmsg_path, 'Europe/Warsaw')

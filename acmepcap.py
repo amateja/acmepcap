@@ -782,15 +782,17 @@ class SipMsgLogFile:
         skipped = self.skipped_non_sip + self.skipped_malformed + \
             self.skipped_timestamp + self.skipped_empty + \
             self.skipped_incomplete + self.skipped_oversized
-        return 'Summary:\n' \
-            f'  converted records: {self.converted}\n' \
-            f'  skipped records: {skipped}\n' \
-            f'  skipped non-SIP records: {self.skipped_non_sip}\n' \
-            f'  skipped malformed records: {self.skipped_malformed}\n' \
-            f'  skipped timestamp records: {self.skipped_timestamp}\n' \
-            f'  skipped empty records: {self.skipped_empty}\n' \
-            f'  skipped incomplete records: {self.skipped_incomplete}\n' \
+        return (
+            'Summary:\n'
+            f'  converted records: {self.converted}\n'
+            f'  skipped records: {skipped}\n'
+            f'  skipped non-SIP records: {self.skipped_non_sip}\n'
+            f'  skipped malformed records: {self.skipped_malformed}\n'
+            f'  skipped timestamp records: {self.skipped_timestamp}\n'
+            f'  skipped empty records: {self.skipped_empty}\n'
+            f'  skipped incomplete records: {self.skipped_incomplete}\n'
             f'  skipped oversized records: {self.skipped_oversized}\n'
+        )
 
     def _start_record(self, record: SipMsgRecordState,
                       header: SipMsgRecordHeader,
