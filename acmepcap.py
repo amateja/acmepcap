@@ -102,8 +102,7 @@ OutputFile = typing.Union[typing.BinaryIO, gzip.GzipFile]
 
 
 def configure() -> argparse.Namespace:
-    """
-    Handle Command Line Interface parameters parsing.
+    """Handle Command Line Interface parameters parsing.
 
     :return: settings
     """
@@ -159,8 +158,7 @@ def input_path(string: str) -> pathlib.Path:
 
 
 def output_path(string: str) -> pathlib.Path:
-    """
-    Validate a writable non-symlink output path and return its absolute path.
+    """Validate a writable non-symlink output path.
 
     Output symlinks are rejected so conversion cannot overwrite or truncate a
     different file than the path provided on the command line.
@@ -193,8 +191,7 @@ def output_path(string: str) -> pathlib.Path:
 
 
 class PacketCapture:
-    """
-    Write Packet Capture files.
+    """Write Packet Capture files.
 
     Based on https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/.
     The writer opens the output path on context entry and closes it on exit.
@@ -244,8 +241,7 @@ class PacketCapture:
         self.output.write(data)
 
     def write(self, frame: Frame) -> None:
-        """
-        Write one Packet Capture frame.
+        """Write one Packet Capture frame.
 
         :param frame: Packet Capture frame object
         """
@@ -253,8 +249,7 @@ class PacketCapture:
 
 
 class Frame:
-    """
-    Represent one Packet Capture frame.
+    """Represent one Packet Capture frame.
 
     Based on https://datatracker.ietf.org/doc/draft-ietf-opsawg-pcap/.
     """
@@ -299,8 +294,7 @@ class UDP:
 
     @property
     def checksum(self) -> int:
-        """
-        Compute a checksum for the UDP packet.
+        """Compute a checksum for the UDP packet.
 
         :return: checksum
         """
@@ -371,8 +365,7 @@ class IPv4(IP):
 
     @property
     def checksum(self) -> int:
-        """
-        Compute a checksum for the IPv4 packet.
+        """Compute a checksum for the IPv4 packet.
 
         :return: checksum
         """
@@ -444,8 +437,7 @@ class IPv6(IP):
 
 @dataclasses.dataclass(frozen=True)
 class SipMsgRecordHeader:
-    """
-    Parsed sipmsg.log header fields needed to build one packet frame.
+    """Parsed sipmsg.log header fields needed to build one packet frame.
 
     The log header itself has no year. The year is resolved later from file
     mtime and chronological order of valid log headers.
@@ -470,8 +462,7 @@ class SipMsgRecordHeader:
 
 
 class SipTimestampResolver:
-    """
-    Resolve missing sipmsg.log years while preserving log order.
+    """Resolve missing sipmsg.log years while preserving log order.
 
     sipmsg.log timestamps are local wall-clock values without a year, UTC
     offset, or DST fold marker. The resolver assumes records are emitted in
@@ -510,8 +501,7 @@ class SipTimestampResolver:
             yield folded
 
     def resolve(self, header: SipMsgRecordHeader) -> datetime.datetime:
-        """
-        Return the next chronological timestamp for a parsed log header.
+        """Return the next chronological timestamp for a parsed log header.
 
         Equal millisecond timestamps are accepted as the same instant. If both
         DST folds move backward, the record is treated as a year rollover.
@@ -529,8 +519,7 @@ class SipTimestampResolver:
 
 
 class SipMsgRecordState:
-    """
-    Mutable state for the record currently being read.
+    """Mutable state for the record currently being read.
 
     The parser receives sipmsg.log one line at a time. This object keeps the
     current header, resolved timestamp, payload lines, and skip state until a
@@ -571,8 +560,7 @@ class SipMsgRecordState:
         self.is_skipped = False
 
     def add_payload_line(self, line: bytes) -> int:
-        """
-        Add a payload line and return its parser outcome code.
+        """Add a payload line and return its parser outcome code.
 
         The first payload line decides if the record looks like SIP. Lines
         starting with whitespace are treated as non-SIP records and skipped.
@@ -622,8 +610,7 @@ class SipMsgRecord:
 
 
 class SipMsgLogFile:
-    """
-    Iterable reader for Acme Packet sipmsg.log files.
+    """Iterable reader for Acme Packet sipmsg.log files.
 
     The reader is designed for support workflows where large SBC logs need to
     be converted into PCAP without loading the whole file into memory. It opens
@@ -659,8 +646,7 @@ class SipMsgLogFile:
 
     @staticmethod
     def _parse_port(port: bytes) -> int:
-        """
-        Convert and validate a UDP port from a sipmsg.log header.
+        """Convert and validate a UDP port from a sipmsg.log header.
 
         UDP itself masks ports to 16 bits, but parser input should be checked
         at the boundary so malformed records can be skipped intentionally.
@@ -671,8 +657,7 @@ class SipMsgLogFile:
         return value
 
     def _parse_header(self, line: bytes) -> SipMsgRecordHeader | None:
-        """
-        Parse one sipmsg.log header line.
+        """Parse one sipmsg.log header line.
 
         Malformed headers return None so callers can continue scanning later
         records. This keeps conversion best-effort for machine-generated logs.
@@ -722,8 +707,7 @@ class SipMsgLogFile:
         )
 
     def _mtime_reference(self) -> datetime.datetime:
-        """
-        Return file mtime in the log timezone, including tarball tolerance.
+        """Return file mtime in the log timezone, including tarball tolerance.
 
         Files copied directly from devices may have sub-second mtime precision.
         Archived files may store mtime with whole-second precision while
@@ -735,8 +719,7 @@ class SipMsgLogFile:
         return datetime.datetime.fromtimestamp(m_timestamp, self.timezone)
 
     def _resolve_start_year(self) -> int | None:
-        """
-        Scan valid headers and resolve the start year for the parsing pass.
+        """Scan valid headers and resolve the start year for the parsing pass.
 
         All valid headers, including non-SIP records, contribute to chronology.
         The first pass builds a virtual timeline from the mtime year, then
@@ -791,8 +774,7 @@ class SipMsgLogFile:
     def _start_record(self, record: SipMsgRecordState,
                       header: SipMsgRecordHeader,
                       resolver: SipTimestampResolver) -> None:
-        """
-        Start tracking a new log record and resolve its timestamp.
+        """Start tracking a new log record and resolve its timestamp.
 
         Timestamp resolution happens before payload classification so skipped
         non-SIP records still preserve chronological context for later records.
@@ -805,8 +787,7 @@ class SipMsgLogFile:
         record.start(header, timestamp, header.ip_class.max_udp_payload)
 
     def _flush_record(self, record: SipMsgRecordState) -> Frame | None:
-        """
-        Convert a delimiter-closed record into a frame when it is complete.
+        """Convert a delimiter-closed record into a frame when it is complete.
 
         Empty records are counted as skipped. Incomplete records are handled at
         EOF, where a missing delimiter means the record may have been truncated
@@ -832,8 +813,7 @@ class SipMsgLogFile:
         return None
 
     def __iter__(self) -> typing.Iterator[Frame]:
-        """
-        Yield frames for complete SIP records.
+        """Yield frames for complete SIP records.
 
         The state machine reacts to valid headers, malformed header candidates,
         exact delimiters, and payload lines. EOF without a delimiter marks the
@@ -893,8 +873,7 @@ class SipMsgLogFile:
 
 
 def main() -> None:
-    """
-    Run the command-line conversion.
+    """Run the command-line conversion.
 
     Read settings, convert sipmsg.log records, and write packet capture output.
     """

@@ -6,8 +6,7 @@ from acmepcap import IPv4, MAX_UINT16, UDP
 
 class TestUdpChecksum(unittest.TestCase):
     def test_udp_checksum(self) -> None:
-        """
-        Validate a published UDP checksum example.
+        """Validate a published UDP checksum example.
 
         The scenario is taken from:
         http://profesores.elo.utfsm.cl/~agv/elo322/UDP_Checksum_HowTo.html
@@ -30,8 +29,7 @@ class TestUdpChecksum(unittest.TestCase):
         self.assertEqual(udp.checksum, 0xf80b)
 
     def test_udp_checksum_all_zeros(self) -> None:
-        """
-        Transmit a computed zero checksum as 0xFFFF.
+        """Transmit a computed zero checksum as 0xFFFF.
 
         A UDP checksum field of zero means the checksum is not used. When the
         computed one's-complement checksum is zero, it must be transmitted as

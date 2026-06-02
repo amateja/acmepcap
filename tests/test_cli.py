@@ -21,8 +21,7 @@ class TestArgs(unittest.TestCase):
         self.tmpdir.cleanup()
 
     def test_parse_args_minimal(self) -> None:
-        """
-        Parse minimal CLI arguments.
+        """Parse minimal CLI arguments.
 
         Verify that all configuration parameters are returned.
         """

@@ -352,8 +352,7 @@ class ReaderTest(unittest.TestCase):
         self.assertEqual(frames[0].seconds, int(expected.timestamp()))
 
     def test_read_without_bracketed_context(self) -> None:
-        """
-        Parse headers without network-interface context.
+        """Parse headers without network-interface context.
 
         The optional `[network-interface:VLAN]` field may be absent.
         """
