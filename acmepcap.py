@@ -25,18 +25,18 @@ if typing.TYPE_CHECKING:
 __version__ = '0.3.0'
 __all__ = [
     'ENDIANNESS',
-    'Frame',
-    'IPv4',
-    'IPv6',
     'LINKTYPE_RAW',
     'MAX_IPV4_UDP_PAYLOAD',
     'MAX_IPV6_UDP_PAYLOAD',
     'MAX_UINT16',
-    'PacketCapture',
     'SNAP_LEN',
-    'SipMsgLogFile',
     'TTL',
-    'UDP'
+    'UDP',
+    'Frame',
+    'IPv4',
+    'IPv6',
+    'PacketCapture',
+    'SipMsgLogFile'
 ]
 
 # constants
