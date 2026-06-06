@@ -36,14 +36,8 @@ acmepcap = 'acmepcap:main'
 [project.optional-dependencies]
 test = [
     'coveralls',
-    'flake8',
-    'flake8-comprehensions',
-    'flake8-eradicate',
-    'flake8-pep3101',
-    'flake8-print',
-    'flake8-quotes',
-    'flake8-use-fstring',
-    'mypy<2.0'
+    'mypy<2.0',
+    'ruff'
 ]
 
 [tool.setuptools.dynamic]
@@ -55,3 +49,35 @@ files = ['acmepcap.py', 'tests']
 show_error_codes = true
 pretty = true
 strict = true
+
+[tool.ruff]
+line-length = 79
+target-version = 'py39'
+
+[tool.ruff.lint]
+select = ['ALL']
+ignore = [
+    # D203 conflicts with D211, and D213 conflicts with D212.
+    # Keep Ruff's D211/D212 convention and silence conflict warnings.
+    'D203',
+    'D213',
+
+    # __slots__ order is semantic in packet/parser data classes.
+    'RUF023',
+
+    # Final trailing commas are intentionally avoided in this project.
+    'COM812',
+
+    # The test suite intentionally uses unittest, not pytest.
+    'PT',
+
+    # Direct exception messages are clearer for this small CLI.
+    'TRY003',
+    'EM101',
+    'EM102'
+]
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = 'single'
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
