@@ -4,7 +4,7 @@ import functools
 import ipaddress
 from unittest import TestCase
 
-from acmepcap import IPv4, IPv6, MAX_IPV4_UDP_PAYLOAD, TTL, UDP
+import acmepcap
 
 
 class IPv4Test(TestCase):
@@ -14,10 +14,10 @@ class IPv4Test(TestCase):
         """Serialize an IPv4 packet with UDP payload."""
         source_port = 1001
         destination_port = 1002
-        udp = UDP(source_port, destination_port, b'')
+        udp = acmepcap.UDP(source_port, destination_port, b'')
         source_ip = int(ipaddress.IPv4Address('192.0.2.1'))
         destination_ip = int(ipaddress.IPv4Address('192.0.2.2'))
-        ip = IPv4(source_ip, destination_ip, udp)
+        ip = acmepcap.IPv4(source_ip, destination_ip, udp)
         ip_checksum = 0xf6cd
         length = 28
         int_ = functools.partial(int.from_bytes, byteorder='big')
@@ -34,9 +34,9 @@ class IPv4Test(TestCase):
         # Flags|Fragment Offset
         self.assertEqual(int_(raw[6:8]), 0)
         # Time to Live
-        self.assertEqual(raw[8], TTL)
+        self.assertEqual(raw[8], acmepcap.TTL)
         # Protocol
-        self.assertEqual(raw[9], UDP.number)
+        self.assertEqual(raw[9], acmepcap.UDP.number)
         # Header Checksum
         self.assertEqual(int_(raw[10:12]), ip_checksum)
         # Source Address
@@ -55,10 +55,10 @@ class IPv4Test(TestCase):
 
     def test_rejects_total_length_overflow(self) -> None:
         """Reject IPv4 packets that cannot fit into Total Length."""
-        payload = b'x' * (MAX_IPV4_UDP_PAYLOAD + 1)
-        udp = UDP(1001, 1002, payload)
+        payload = b'x' * (acmepcap.MAX_IPV4_UDP_PAYLOAD + 1)
+        udp = acmepcap.UDP(1001, 1002, payload)
         with self.assertRaises(ValueError):
-            IPv4(0, 0, udp)
+            acmepcap.IPv4(0, 0, udp)
 
 
 class IPv6Test(TestCase):
@@ -68,10 +68,10 @@ class IPv6Test(TestCase):
         """Serialize an IPv6 packet with UDP payload."""
         source_port = 1001
         destination_port = 1002
-        udp = UDP(source_port, destination_port, b'')
+        udp = acmepcap.UDP(source_port, destination_port, b'')
         source_ip = int(ipaddress.IPv6Address('2001:db8::1'))
         destination_ip = int(ipaddress.IPv6Address('2001:db8::2'))
-        ip = IPv6(source_ip, destination_ip, udp)
+        ip = acmepcap.IPv6(source_ip, destination_ip, udp)
         length = 8
         raw = bytes(ip)
         # Version|Traffic Class|Flow Label
@@ -79,9 +79,9 @@ class IPv6Test(TestCase):
         # Payload Length
         self.assertEqual(int.from_bytes(raw[4:6], 'big'), length)
         # Next Header
-        self.assertEqual(raw[6], UDP.number)
+        self.assertEqual(raw[6], acmepcap.UDP.number)
         # Hop Limit
-        self.assertEqual(raw[7], TTL)
+        self.assertEqual(raw[7], acmepcap.TTL)
         # Source Address
         self.assertEqual(int.from_bytes(raw[8:24], 'big'), source_ip)
         # Destination Address

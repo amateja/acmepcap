@@ -8,8 +8,7 @@ import time
 import typing
 import unittest
 
-from acmepcap import ENDIANNESS, Frame, IPv4, LINKTYPE_RAW, PacketCapture, \
-    SNAP_LEN, UDP
+import acmepcap
 
 
 def get_byteorder() -> typing.Literal['little', 'big']:
@@ -20,9 +19,9 @@ def get_byteorder() -> typing.Literal['little', 'big']:
     derive the expected byte order from `acmepcap.ENDIANNESS` and the current
     platform.
     """
-    if ENDIANNESS == '<':
+    if acmepcap.ENDIANNESS == '<':
         return 'little'
-    if ENDIANNESS in ('>', '!'):
+    if acmepcap.ENDIANNESS in ('>', '!'):
         return 'big'
     return sys.byteorder
 
@@ -41,7 +40,7 @@ class TestPacketCapture(unittest.TestCase):
 
     def test_file_header(self) -> None:
         """Verify Packet Capture file header fields."""
-        with PacketCapture(self.output_path, compressed=False):
+        with acmepcap.PacketCapture(self.output_path, compressed=False):
             pass
         raw = self.output_path.read_bytes()
         byteorder = get_byteorder()
@@ -56,14 +55,16 @@ class TestPacketCapture(unittest.TestCase):
         # Reserved2
         self.assertEqual(int.from_bytes(raw[12:16], byteorder), 0)
         # maximum length of captured packets, in octets
-        self.assertEqual(int.from_bytes(raw[16:20], byteorder), SNAP_LEN)
+        self.assertEqual(int.from_bytes(raw[16:20], byteorder),
+                         acmepcap.SNAP_LEN)
         # data link type and additional information
-        self.assertEqual(int.from_bytes(raw[20:24], byteorder), LINKTYPE_RAW)
+        self.assertEqual(int.from_bytes(raw[20:24], byteorder),
+                         acmepcap.LINKTYPE_RAW)
         self.assertEqual(len(raw), 24)
 
     def test_exit_without_enter(self) -> None:
         """Raise when context exit is called before context entry."""
-        pcap = PacketCapture(self.output_path, compressed=False)
+        pcap = acmepcap.PacketCapture(self.output_path, compressed=False)
         with self.assertRaises(RuntimeError):
             pcap.__exit__(None, None, None)
         self.assertFalse(self.output_path.exists())
@@ -75,12 +76,13 @@ class TestPacketCapture(unittest.TestCase):
         microseconds = int((timestamp - seconds) * 1000000)
         source_port = 5060
         destination_port = 5060
-        udp = UDP(source_port, destination_port, b'')
+        udp = acmepcap.UDP(source_port, destination_port, b'')
         source_ip = int(ipaddress.IPv4Address('192.0.2.1'))
         destination_ip = int(ipaddress.IPv4Address('192.0.2.2'))
-        ip = IPv4(source_ip, destination_ip, udp)
-        frame = Frame(seconds, microseconds, ip)
-        with PacketCapture(self.output_path, compressed=False) as pcap:
+        ip = acmepcap.IPv4(source_ip, destination_ip, udp)
+        frame = acmepcap.Frame(seconds, microseconds, ip)
+        with acmepcap.PacketCapture(self.output_path,
+                                    compressed=False) as pcap:
             pcap.write(frame)
         raw = self.output_path.read_bytes()
         byteorder = get_byteorder()
@@ -92,9 +94,9 @@ class TestPacketCapture(unittest.TestCase):
 
     def test_rejects_packet_longer_than_snap_len(self) -> None:
         """Reject frames that cannot fit into the configured PCAP SnapLen."""
-        udp = UDP(1001, 1002, b'')
-        too_long_packet = IPv4(0, 0, udp)
-        too_long_packet.length = SNAP_LEN + 1
+        udp = acmepcap.UDP(1001, 1002, b'')
+        too_long_packet = acmepcap.IPv4(0, 0, udp)
+        too_long_packet.length = acmepcap.SNAP_LEN + 1
 
         with self.assertRaises(ValueError):
-            Frame(0, 0, too_long_packet)
+            acmepcap.Frame(0, 0, too_long_packet)

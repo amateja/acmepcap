@@ -3,7 +3,7 @@
 import ipaddress
 import unittest
 
-from acmepcap import IPv4, MAX_UINT16, UDP
+import acmepcap
 
 
 class TestUdpChecksum(unittest.TestCase):
@@ -20,8 +20,8 @@ class TestUdpChecksum(unittest.TestCase):
         src_port = 41103
         dst_port = 9876
         payload = b'\x62\x62'
-        udp = UDP(src_port, dst_port, payload)
-        IPv4(src_ip, dst_ip, udp)
+        udp = acmepcap.UDP(src_port, dst_port, payload)
+        acmepcap.IPv4(src_ip, dst_ip, udp)
         self.assertEqual(udp.checksum, 0x14de)
 
     def test_udp_checksum_with_no_network(self) -> None:
@@ -29,7 +29,7 @@ class TestUdpChecksum(unittest.TestCase):
         src_port = 1001
         dst_port = 1002
         payload = b''
-        udp = UDP(src_port, dst_port, payload)
+        udp = acmepcap.UDP(src_port, dst_port, payload)
         self.assertEqual(udp.checksum, 0xf80b)
 
     def test_udp_checksum_all_zeros(self) -> None:
@@ -44,13 +44,13 @@ class TestUdpChecksum(unittest.TestCase):
         src_port = 1
         dst_port = 31703
         payload = b'\x00'
-        udp = UDP(src_port, dst_port, payload)
-        IPv4(src_ip, dst_ip, udp)
+        udp = acmepcap.UDP(src_port, dst_port, payload)
+        acmepcap.IPv4(src_ip, dst_ip, udp)
         self.assertEqual(udp.checksum, 0xffff)
 
     def test_rejects_length_overflow(self) -> None:
         """Reject payloads that cannot fit into the UDP Length field."""
-        payload = b'x' * (MAX_UINT16 - UDP.offset + 1)
+        payload = b'x' * (acmepcap.MAX_UINT16 - acmepcap.UDP.offset + 1)
 
         with self.assertRaises(ValueError):
-            UDP(1001, 1002, payload)
+            acmepcap.UDP(1001, 1002, payload)
