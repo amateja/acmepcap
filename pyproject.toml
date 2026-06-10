@@ -35,6 +35,7 @@ acmepcap = 'acmepcap:main'
 
 [project.optional-dependencies]
 test = [
+    'coverage[toml]',
     'coveralls',
     'mypy<2.0',
     'ruff'
@@ -42,6 +43,16 @@ test = [
 
 [tool.setuptools.dynamic]
 version = {attr = 'acmepcap.__version__'}
+
+[tool.coverage.report]
+exclude_lines = [
+    'raise NotImplementedError',
+    'if __name__ == .__main__.:',
+    'if typing.TYPE_CHECKING:'
+]
+
+[tool.coverage.run]
+branch = true
 
 [tool.mypy]
 python_version = '3.9'
