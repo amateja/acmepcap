@@ -8,6 +8,7 @@
 .pycharmrc
 .tox/
 __pycache__/
+build/
 dist/
 htmlcov/
 results.xml
