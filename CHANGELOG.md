@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.4.0] - 2026-06-11
+
+### Added
+
+- Added parser support for IPv6 `sipmsg.log` endpoints in `[address]:port`
+  notation.
+- Added oversized SIP payload protection for UDP/IPv4 and UDP/IPv6 packet
+  limits, including a `--summary` counter.
+
+### Changed
+
+- Changed output path validation to reject symbolic links before opening the
+  output file.
+- Changed generated PCAP SnapLen to fit maximum-size normal IPv6 packets.
+
+### Fixed
+
+- Fixed IPv6 packet serialization on Python 3.9.
+
 ## [0.3.0] - 2026-05-21
 
 ### Added

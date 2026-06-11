@@ -22,7 +22,7 @@ from typing_extensions import Self
 if typing.TYPE_CHECKING:
     import types
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 __all__ = [
     'ENDIANNESS',
     'LINKTYPE_RAW',
